@@ -1,0 +1,356 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
+
+:root {
+  /* Основная цветовая схема */
+  --color-primary: 79, 70, 229; /* indigo-600 */
+  --color-primary-light: 99, 102, 241; /* indigo-500 */
+  --color-primary-dark: 67, 56, 202; /* indigo-700 */
+  
+  --color-secondary: 139, 92, 246; /* violet-500 */
+  --color-accent: 249, 115, 22; /* orange-500 */
+  
+  /* Цвета для темной темы */
+  --color-bg-dark: 15, 23, 42; /* slate-900 */
+  --color-card-bg-dark: 30, 41, 59; /* slate-800 */
+  --color-card-hover-dark: 51, 65, 85; /* slate-700 */
+  
+  /* Текст */
+  --color-text-dark: 255, 255, 255;
+  --color-text-dim-dark: 148, 163, 184; /* slate-400 */
+  
+  /* Границы */
+  --color-border-dark: 51, 65, 85; /* slate-700 */
+
+  /* Текст */
+  --color-text-light: #f8fafc;
+  --color-text-dim: #94a3b8;
+
+  /* Состояния */
+  --color-success: #22c55e;
+  --color-error: #ef4444;
+  --color-warning: #f59e0b;
+  --color-info: #3b82f6;
+}
+
+@layer base {
+  body {
+    @apply bg-slate-900 text-white antialiased;
+    background-color: rgb(var(--color-bg-dark)) !important;
+    color: var(--color-text-light);
+    font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-bold text-white;
+  }
+
+  h1 {
+    @apply text-4xl;
+  }
+
+  h2 {
+    @apply text-3xl;
+  }
+
+  h3 {
+    @apply text-2xl;
+  }
+
+  p {
+    @apply text-slate-300;
+  }
+
+  a {
+    @apply text-indigo-400 hover:text-indigo-300 transition-colors;
+  }
+}
+
+@layer components {
+  /* Инпуты */
+  .input-primary {
+    @apply w-full px-4 py-2.5 rounded-lg border bg-slate-800/80 border-slate-600 
+    text-white placeholder-slate-400 
+    focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent
+    transition-all duration-200 ease-in-out;
+    pointer-events: auto !important;
+    background-color: rgb(30, 41, 59, 0.8) !important; /* slate-800 с прозрачностью */
+    color: #fff !important;
+  }
+  
+  .input-field {
+    @apply w-full px-4 py-3 rounded-lg border border-slate-600 bg-slate-800 
+    text-white placeholder-slate-400 
+    focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent
+    transition duration-200;
+    pointer-events: auto !important;
+    background-color: rgb(30, 41, 59) !important; /* slate-800 */
+    color: #fff !important;
+  }
+
+  .form-input {
+    @apply w-full px-4 py-3 rounded-lg border border-slate-600 bg-slate-800 
+    text-white placeholder-slate-400 
+    focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent
+    transition duration-200;
+    pointer-events: auto !important;
+    background-color: rgb(30, 41, 59) !important; /* slate-800 */
+    color: #fff !important;
+  }
+  
+  /* Чекбоксы */
+  .form-checkbox {
+    @apply h-4 w-4 rounded border-slate-600 bg-slate-800 text-indigo-600 focus:ring-indigo-500;
+    pointer-events: auto !important;
+    background-color: rgb(30, 41, 59) !important; /* slate-800 */
+  }
+
+  /* Лейблы */
+  .form-label {
+    @apply block text-sm font-medium mb-2 text-slate-200;
+  }
+  
+  /* Ошибки формы */
+  .form-error {
+    @apply text-red-400 text-sm mt-1;
+  }
+
+  /* Кнопки */
+  .btn-primary {
+    @apply bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-4 rounded-lg transition-colors;
+    pointer-events: auto !important;
+  }
+
+  .btn-secondary {
+    @apply bg-slate-700 hover:bg-slate-600 text-white font-medium py-2 px-4 rounded-lg transition-colors;
+    pointer-events: auto !important;
+  }
+
+  .btn-accent {
+    @apply bg-orange-500 hover:bg-orange-600 text-white font-medium py-2 px-4 rounded-lg transition-colors;
+    pointer-events: auto !important;
+  }
+
+  .btn-outline {
+    @apply border border-slate-600 hover:border-indigo-500 hover:bg-slate-700 text-white font-medium py-2 px-4 rounded-lg transition-colors;
+    pointer-events: auto !important;
+  }
+
+  /* Карточки */
+  .card {
+    @apply bg-slate-800 rounded-xl shadow-lg p-6 border border-slate-700/50;
+  }
+
+  /* Контейнеры */
+  .container-narrow {
+    @apply max-w-md mx-auto;
+  }
+
+  .container-wide {
+    @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+  }
+
+  /* Формы */
+  .form-container {
+    @apply space-y-6;
+  }
+
+  /* Ошибки */
+  .error-message {
+    @apply bg-red-900/30 border-l-4 border-red-500 text-red-200 p-4 rounded-md mb-6;
+  }
+
+  /* Навигация */
+  .nav-link {
+    @apply text-slate-300 hover:text-white transition-colors px-3 py-2;
+  }
+
+  .nav-link-active {
+    @apply text-white font-medium border-b-2 border-indigo-500 px-3 py-2;
+  }
+
+  /* Подсказки */
+  .hint-text {
+    @apply text-slate-400 text-sm mt-1;
+  }
+
+  /* Анимированные элементы */
+  .animate-fadeIn {
+    animation: fadeIn 0.5s ease-in-out;
+  }
+  
+  .animate-slideUp {
+    animation: slideUp 0.5s ease-in-out;
+  }
+  
+  .animate-pulse-light {
+    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+  
+  .loading-spinner {
+    @apply animate-spin text-indigo-600;
+  }
+}
+
+/* Кастомные анимации */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { 
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to { 
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* Стили для игрового уровня */
+.level-container {
+  @apply max-w-6xl mx-auto px-4 py-8;
+}
+
+.level-title {
+  @apply text-3xl font-bold text-center mb-8 text-white;
+}
+
+.level-subtitle {
+  @apply text-xl font-semibold mb-4 text-indigo-300;
+}
+
+/* Компонент диалогов */
+.dialog-container {
+  @apply my-6 space-y-6;
+}
+
+.dialog-bubble {
+  @apply rounded-xl p-4 max-w-3xl;
+}
+
+.dialog-bubble-left {
+  @apply bg-slate-700 border-l-4 border-indigo-500 ml-0 mr-auto;
+}
+
+.dialog-bubble-right {
+  @apply bg-indigo-900 border-r-4 border-indigo-400 ml-auto mr-0;
+}
+
+.dialog-avatar {
+  @apply w-10 h-10 rounded-full object-cover border-2 border-indigo-500 bg-slate-600;
+}
+
+.dialog-name {
+  @apply font-semibold text-indigo-300;
+}
+
+.dialog-role {
+  @apply text-sm text-slate-400;
+}
+
+.dialog-message {
+  @apply py-2 text-white;
+}
+
+.typing-cursor {
+  @apply inline-block w-2 h-4 bg-indigo-300 ml-1 animate-pulse;
+}
+
+/* Анализ материалов */
+.material-card {
+  @apply bg-slate-800 hover:bg-slate-700 p-4 rounded-lg border border-slate-600 cursor-pointer transition-colors;
+}
+
+.material-card-active {
+  @apply border-indigo-500 bg-slate-700 shadow-lg shadow-indigo-500/20;
+}
+
+.material-icon {
+  @apply w-8 h-8 text-indigo-400 mb-2;
+}
+
+.tab-container {
+  @apply flex border-b border-slate-600 mb-4;
+}
+
+.tab {
+  @apply px-4 py-2 text-slate-400 hover:text-white cursor-pointer;
+}
+
+.tab-active {
+  @apply text-white border-b-2 border-indigo-500;
+}
+
+.note-container {
+  @apply bg-slate-800/50 p-4 rounded-lg border border-slate-600 mt-4;
+}
+
+.note-textarea {
+  @apply w-full p-3 bg-slate-700 rounded border border-slate-600 text-white placeholder-slate-400 resize-none
+  focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent;
+}
+
+/* Решения */
+.solution-card {
+  @apply bg-slate-800 p-4 rounded-lg border border-slate-600 mb-4 cursor-pointer transition-all;
+}
+
+.solution-card-selected {
+  @apply border-indigo-500 bg-slate-700 shadow-lg shadow-indigo-500/20;
+}
+
+.solution-title {
+  @apply font-semibold text-lg text-indigo-300 mb-2;
+}
+
+.solution-description {
+  @apply text-slate-300 mb-3;
+}
+
+.pros-cons-container {
+  @apply grid grid-cols-2 gap-4 mt-4;
+}
+
+.pros-list {
+  @apply space-y-2 text-green-300;
+}
+
+.cons-list {
+  @apply space-y-2 text-red-300;
+}
+
+.pros-cons-title {
+  @apply font-medium mb-2;
+}
+
+/* Секция вознаграждений */
+.rewards-container {
+  @apply bg-slate-800/70 p-6 rounded-xl border border-indigo-500/50 my-6;
+}
+
+.reward-item {
+  @apply flex items-center space-x-3 p-3 bg-slate-700/50 rounded-lg mb-3;
+}
+
+.reward-icon {
+  @apply text-indigo-400 text-xl;
+}
+
+.summary-container {
+  @apply bg-slate-800/70 p-6 rounded-xl border border-slate-600 my-6;
+}
+
+.summary-item {
+  @apply flex justify-between p-3 border-b border-slate-700 last:border-b-0;
+} 
