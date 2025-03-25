@@ -2,17 +2,18 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import Link from 'next/link';
-import { useSelector } from 'react-redux';
 import { motion } from 'framer-motion';
-
-import { login, clearError } from '../../store/slices/authSlice';
-import type { RootState } from '../../store';
-import { useAppDispatch } from '../../store/hooks';
+import { signIn, useSession } from 'next-auth/react';
 
 export default function Login() {
   const router = useRouter();
-  const dispatch = useAppDispatch();
-  const { loading, error, isAuthenticated } = useSelector((state: RootState) => state.auth);
+  const { data: session, status } = useSession();
+  const isLoading = status === 'loading';
+  const isAuthenticated = status === 'authenticated';
+  
+  // Состояние для ошибок аутентификации
+  const [error, setError] = useState<string | null>(null);
+  const [formLoading, setFormLoading] = useState(false);
 
   // Состояние формы
   const [formData, setFormData] = useState({
@@ -21,44 +22,43 @@ export default function Login() {
     remember: false
   });
   
-  // Состояние для отслеживания попытки отправки формы
-  const [formSubmitted, setFormSubmitted] = useState(false);
-  
   // Состояние для отслеживания клиентского рендеринга
   const [isClient, setIsClient] = useState(false);
 
   // Получаем URL для перенаправления после авторизации
-  const { returnUrl } = router.query;
+  const { callbackUrl, error: routerError } = router.query;
 
   // Устанавливаем флаг клиентского рендеринга
   useEffect(() => {
     setIsClient(true);
-  }, []);
+    
+    // Обрабатываем ошибки из URL
+    if (routerError) {
+      switch (routerError) {
+        case 'CredentialsSignin':
+          setError('Неверный email или пароль');
+          break;
+        default:
+          setError('Произошла ошибка при входе');
+          break;
+      }
+    }
+  }, [routerError]);
 
   // Если пользователь уже авторизован, перенаправляем его
   useEffect(() => {
     if (isAuthenticated) {
-      const redirectUrl = returnUrl 
-        ? decodeURIComponent(returnUrl as string) 
+      const redirectUrl = callbackUrl 
+        ? decodeURIComponent(callbackUrl as string) 
         : '/dashboard';
       
       // Проверяем, не содержит ли returnUrl путь аутентификации
-      // и не является ли он цепочкой с returnUrl=
       const isValidRedirect = typeof redirectUrl === 'string' && 
-                              !redirectUrl.includes('/auth/') && 
-                              !redirectUrl.includes('returnUrl=');
+                              !redirectUrl.includes('/auth/');
       
       router.push(isValidRedirect ? redirectUrl : '/dashboard');
     }
-  }, [isAuthenticated, returnUrl, router]);
-
-  // Очищаем ошибки при изменении email или пароля
-  useEffect(() => {
-    if (error && formSubmitted) {
-      dispatch(clearError());
-      setFormSubmitted(false);
-    }
-  }, [formData.email, formData.password, error, dispatch, formSubmitted]);
+  }, [isAuthenticated, callbackUrl, router]);
 
   // Обработчик изменения полей формы
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -67,17 +67,87 @@ export default function Login() {
       ...formData,
       [name]: type === 'checkbox' ? checked : value,
     });
+    
+    // Сбрасываем ошибку при изменении полей
+    setError(null);
   };
 
   // Обработчик отправки формы
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setFormSubmitted(true);
-    dispatch(login({ 
-      email: formData.email, 
-      password: formData.password,
-      remember: true // Всегда сохраняем токен для предотвращения проблем с обновлением страницы
-    }));
+    setFormLoading(true);
+    setError(null);
+    
+    console.log('Попытка входа для:', formData.email);
+    
+    try {
+      // Используем NextAuth для входа
+      const result = await signIn('credentials', {
+        redirect: false,
+        email: formData.email,
+        password: formData.password,
+        callbackUrl: callbackUrl as string || '/dashboard'
+      });
+      
+      console.log('Результат входа через NextAuth:', result);
+      
+      if (result?.error) {
+        console.error('Ошибка входа через NextAuth:', result.error);
+        
+        // Если NextAuth не сработал, пробуем напрямую через API
+        console.log('Пробуем войти через API напрямую...');
+        
+        try {
+          // API URL из переменных окружения или localhost
+          const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
+          
+          // Запрос к API входа
+          const apiResponse = await fetch(`${API_URL}/auth/login`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              email: formData.email,
+              password: formData.password
+            })
+          });
+          
+          console.log('API ответ статус:', apiResponse.status);
+          
+          if (apiResponse.ok) {
+            const data = await apiResponse.json();
+            console.log('API ответ данные:', data);
+            
+            if (data.success) {
+              // Сохраняем токен в localStorage (для обратной совместимости)
+              localStorage.setItem('token', data.token);
+              localStorage.setItem('user', JSON.stringify(data.user));
+              
+              // Перенаправляем на dashboard
+              router.push('/dashboard');
+              return;
+            }
+          }
+          
+          // Показываем ошибку, если API вход не удался
+          const errorData = await apiResponse.json();
+          setError(errorData.message || 'Неверный email или пароль');
+        } catch (apiError) {
+          console.error('Ошибка при попытке входа через API:', apiError);
+          setError('Произошла ошибка при подключении к серверу');
+        }
+      } else if (result?.url) {
+        console.log('Успешный вход через NextAuth, перенаправление на:', result.url);
+        // Успешный вход, NextAuth автоматически обновит сессию
+        router.push(result.url);
+      }
+    } catch (err: any) {
+      console.error('Ошибка входа:', err);
+      setError('Произошла ошибка при подключении к серверу');
+    } finally {
+      setFormLoading(false);
+    }
   };
 
   return (
@@ -92,14 +162,12 @@ export default function Login() {
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         className="min-h-screen bg-gradient-to-br from-gray-900 to-slate-900 flex flex-col justify-center items-center px-4 sm:px-6 lg:px-8"
-        style={{ pointerEvents: 'auto' }}
       >
         <motion.div
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.2 }}
           className="w-full max-w-md"
-          style={{ pointerEvents: 'auto' }}
         >
           <div className="text-center mb-8">
             <motion.div
@@ -135,7 +203,7 @@ export default function Login() {
               </motion.div>
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-6" style={{ pointerEvents: 'auto' }}>
+            <form onSubmit={handleSubmit} className="space-y-6">
               <div>
                 <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-1">
                   Email
@@ -149,7 +217,6 @@ export default function Login() {
                   onChange={handleChange}
                   className="input-primary w-full"
                   placeholder="your@email.com"
-                  style={{ pointerEvents: 'auto' }}
                 />
               </div>
 
@@ -171,7 +238,6 @@ export default function Login() {
                   onChange={handleChange}
                   className="input-primary w-full"
                   placeholder="••••••••"
-                  style={{ pointerEvents: 'auto' }}
                 />
               </div>
 
@@ -183,7 +249,6 @@ export default function Login() {
                   checked={formData.remember}
                   onChange={handleChange}
                   className="h-4 w-4 rounded bg-gray-700 border-gray-600 text-blue-600 focus:ring-blue-500"
-                  style={{ pointerEvents: 'auto' }}
                 />
                 <label htmlFor="remember" className="ml-2 block text-sm text-gray-300">
                   Запомнить меня
@@ -193,11 +258,10 @@ export default function Login() {
               <div>
                 <button
                   type="submit"
-                  disabled={loading}
+                  disabled={formLoading || isLoading}
                   className="btn-primary w-full"
-                  style={{ pointerEvents: 'auto' }}
                 >
-                  {loading ? (
+                  {(formLoading || isLoading) ? (
                     <span className="flex items-center justify-center">
                       <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>

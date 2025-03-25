@@ -1,16 +1,10 @@
-import { useEffect, ReactNode, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
-import { useSelector, useDispatch } from 'react-redux';
-import { RootState } from '../../store';
-import { selectSelectedCharacter } from '../../store/slices/characterSlice';
-import { checkAuthStatus } from '../../store/slices/authSlice';
-import { motion } from 'framer-motion';
-import { AnyAction } from '@reduxjs/toolkit';
-import { ThunkDispatch } from 'redux-thunk';
+import { useSession } from 'next-auth/react';
 
 interface ProtectedRouteProps {
-  children: ReactNode;
-  characterRequired?: boolean;
+  children: React.ReactNode;
+  requireCharacter?: boolean;
 }
 
 /**
@@ -18,56 +12,52 @@ interface ProtectedRouteProps {
  * Перенаправляет неавторизованных пользователей на страницу входа
  * и сохраняет исходный URL для возврата после авторизации
  */
-const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, characterRequired = false }) => {
+const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ 
+  children,
+  requireCharacter = false
+}) => {
   const router = useRouter();
-  const dispatch = useDispatch<ThunkDispatch<RootState, unknown, AnyAction>>();
-  const { isAuthenticated, loading } = useSelector((state: RootState) => state.auth);
-  const selectedCharacter = useSelector(selectSelectedCharacter);
-  const [isInitialized, setIsInitialized] = useState(false);
+  const { data: session, status } = useSession();
+  const loading = status === 'loading';
+  const isAuthenticated = status === 'authenticated';
+  
+  // Отслеживаем, произошла ли проверка аутентификации
+  const [isVerified, setIsVerified] = useState(false);
 
-  // Проверяем статус аутентификации при монтировании компонента
+  // Используем hasCharacter из сессии NextAuth, если доступен
+  const hasCharacter = session?.user?.hasCharacter || false;
+
+  // Выполняем проверку аутентификации
   useEffect(() => {
-    const checkAuth = async () => {
-      await dispatch(checkAuthStatus());
-      setIsInitialized(true);
-    };
-    
-    checkAuth();
-  }, [dispatch]);
-
-  // Выполняем перенаправление только после инициализации
-  useEffect(() => {
-    if (!isInitialized) return;
-
-    // Проверяем токен локально для предотвращения мигания при обновлении страницы
-    const hasLocalToken = typeof window !== 'undefined' && !!localStorage.getItem('token');
-
-    if (!loading && !isAuthenticated && !hasLocalToken) {
-      // Сохраняем текущий URL для возврата после авторизации
-      const returnUrl = encodeURIComponent(router.asPath);
-      router.push(`/auth/login?returnUrl=${returnUrl}`);
-    } else if (!loading && isAuthenticated && characterRequired && !selectedCharacter) {
-      // Если требуется персонаж, но он не выбран, перенаправляем на страницу выбора
-      // с указанием, куда вернуться после выбора
-      const returnUrl = encodeURIComponent(router.asPath);
-      
-      // Всегда используем корректный URL для перенаправления
-      const currentPath = router.asPath;
-      
-      // Проверяем, является ли текущий путь страницей "Играть" (проверяем как /dashboard, так и /levels)
-      if (currentPath.includes('/dashboard') || currentPath.includes('/levels')) {
-        router.push(`/character?redirectTo=/levels`);
-      } else {
-        router.push(`/character?redirectTo=${returnUrl}`);
-      }
+    if (status !== 'loading') {
+      setIsVerified(true);
     }
-  }, [loading, isAuthenticated, router, characterRequired, selectedCharacter, isInitialized]);
+  }, [status]);
 
-  // Показываем пустой div во время загрузки или перенаправления
-  if (loading || !isInitialized || (!isAuthenticated && typeof window !== 'undefined' && !localStorage.getItem('token')) || (characterRequired && !selectedCharacter)) {
-    return <div className="min-h-screen bg-slate-900"></div>;
+  // Выполняем перенаправление, если необходимо
+  useEffect(() => {
+    if (!isVerified) return;
+
+    if (!isAuthenticated) {
+      // Сохраняем текущий URL для возврата после авторизации
+      const currentPath = encodeURIComponent(router.asPath);
+      router.push(`/auth/login?callbackUrl=${currentPath}`);
+    } else if (requireCharacter && !hasCharacter) {
+      // Если требуется персонаж, но он не выбран, перенаправляем на страницу выбора
+      router.push('/character');
+    }
+  }, [isAuthenticated, requireCharacter, hasCharacter, router, isVerified]);
+
+  // Показываем загрузчик во время проверки аутентификации
+  if (loading || !isVerified || (!isAuthenticated || (requireCharacter && !hasCharacter))) {
+    return (
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
+        <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
   }
 
+  // Если пользователь аутентифицирован, показываем содержимое страницы
   return <>{children}</>;
 };
 

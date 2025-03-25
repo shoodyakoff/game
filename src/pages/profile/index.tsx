@@ -1,31 +1,52 @@
 import { useState, useEffect } from 'react';
-import { useSelector, useDispatch } from 'react-redux';
+import { useDispatch } from 'react-redux';
 import { NextPage } from 'next';
 import Head from 'next/head';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
+import { useSession } from 'next-auth/react';
+import axios from 'axios';
 
 import ProtectedRoute from '../../components/auth/ProtectedRoute';
 import { RootState } from '../../store';
-import { logout } from '../../store/slices/authSlice';
 import { selectSelectedCharacter } from '../../store/slices/characterSlice';
+import LogoutButton from '../../components/LogoutButton';
 
 const Profile: NextPage = () => {
   const dispatch = useDispatch();
-  const { user } = useSelector((state: RootState) => state.auth);
-  const selectedCharacter = useSelector(selectSelectedCharacter);
+  const { data: session, status } = useSession();
+  const user = session?.user;
+  
+  // Обновление для обработки типов user из NextAuth
+  const selectedCharacter = user && user.hasCharacter ? { 
+    name: user.name || 'Персонаж',
+    type: user.role || 'user',
+    icon: user.image || '/images/characters/icons/default.png'
+  } : null;
+  
   const [isClient, setIsClient] = useState(false);
   
   useEffect(() => {
     // Указываем, что мы находимся на клиенте
     setIsClient(true);
-  }, []);
+    
+    // Заполняем форму данными из сессии
+    if (user) {
+      setFormData(prev => ({
+        ...prev,
+        name: user.name || '',
+        email: user.email || '',
+        fullName: user.fullName || '',
+        bio: user.bio || ''
+      }));
+    }
+  }, [user]);
   
   const [formData, setFormData] = useState({
-    username: user?.username || '',
-    email: user?.email || '',
-    fullName: user?.fullName || '',
-    bio: user?.bio || '',
+    name: '',
+    email: '',
+    fullName: '',
+    bio: '',
     currentPassword: '',
     newPassword: '',
     confirmPassword: '',
@@ -40,25 +61,51 @@ const Profile: NextPage = () => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
   
-  const handleProfileUpdate = (e: React.FormEvent) => {
+  const handleProfileUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     
-    // Здесь будет API-запрос на обновление профиля
-    setTimeout(() => {
-      setIsLoading(false);
+    try {
+      // Реальный API-запрос на обновление профиля
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
+      const response = await axios.put(`${API_URL}/user/profile`, {
+        name: formData.name,
+        email: formData.email,
+        fullName: formData.fullName,
+        bio: formData.bio
+      }, {
+        headers: { 
+          'Content-Type': 'application/json'
+        },
+        withCredentials: true // Важно для передачи cookies с session token
+      });
+      
       setMessage({ 
         type: 'success', 
         text: 'Профиль успешно обновлен!' 
       });
       
+      // Обновляем сессию, потребуется перезагрузка страницы
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
+    } catch (error: any) {
+      console.error('Ошибка обновления профиля:', error);
+      setMessage({
+        type: 'error',
+        text: error.response?.data?.message || 'Произошла ошибка при обновлении профиля'
+      });
+    } finally {
+      setIsLoading(false);
+      
+      // Сбрасываем сообщение через 3 секунды
       setTimeout(() => {
         setMessage({ type: '', text: '' });
       }, 3000);
-    }, 1000);
+    }
   };
   
-  const handlePasswordUpdate = (e: React.FormEvent) => {
+  const handlePasswordUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (formData.newPassword !== formData.confirmPassword) {
@@ -69,11 +116,41 @@ const Profile: NextPage = () => {
       return;
     }
     
+    if (formData.newPassword.length < 8) {
+      setMessage({ 
+        type: 'error', 
+        text: 'Пароль должен содержать минимум 8 символов' 
+      });
+      return;
+    }
+    
+    // Проверка наличия цифры и специального символа
+    const hasNumber = /\d/.test(formData.newPassword);
+    const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(formData.newPassword);
+    
+    if (!hasNumber || !hasSpecial) {
+      setMessage({ 
+        type: 'error', 
+        text: 'Пароль должен содержать хотя бы одну цифру и один специальный символ' 
+      });
+      return;
+    }
+    
     setIsLoading(true);
     
-    // Здесь будет API-запрос на обновление пароля
-    setTimeout(() => {
-      setIsLoading(false);
+    try {
+      // Реальный API-запрос на обновление пароля
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
+      const response = await axios.put(`${API_URL}/user/password`, {
+        currentPassword: formData.currentPassword,
+        newPassword: formData.newPassword
+      }, {
+        headers: { 
+          'Content-Type': 'application/json'
+        },
+        withCredentials: true // Важно для передачи cookies с session token
+      });
+      
       setMessage({ 
         type: 'success', 
         text: 'Пароль успешно обновлен!' 
@@ -85,19 +162,24 @@ const Profile: NextPage = () => {
         newPassword: '',
         confirmPassword: '',
       }));
+    } catch (error: any) {
+      console.error('Ошибка обновления пароля:', error);
+      setMessage({
+        type: 'error',
+        text: error.response?.data?.message || 'Произошла ошибка при обновлении пароля'
+      });
+    } finally {
+      setIsLoading(false);
       
+      // Сбрасываем сообщение через 3 секунды
       setTimeout(() => {
         setMessage({ type: '', text: '' });
       }, 3000);
-    }, 1000);
-  };
-  
-  const handleLogout = () => {
-    dispatch(logout());
+    }
   };
   
   return (
-    <ProtectedRoute characterRequired={true}>
+    <ProtectedRoute requireCharacter={true}>
       <div className="min-h-screen bg-slate-900">
         <Head>
           <title>Профиль | GOTOGROW</title>
@@ -143,15 +225,10 @@ const Profile: NextPage = () => {
             <div className="flex items-center space-x-4">
               {isClient && user && (
                 <span className="text-sm text-slate-300 hidden md:inline-block">
-                  Привет, {user?.username || user?.email}
+                  Привет, {user?.name || user?.email}
                 </span>
               )}
-              <button 
-                onClick={handleLogout}
-                className="bg-slate-700 hover:bg-slate-600 text-white text-sm py-2 px-4 rounded-lg transition-colors"
-              >
-                Выйти
-              </button>
+              <LogoutButton />
             </div>
           </div>
         </header>
@@ -287,12 +364,12 @@ const Profile: NextPage = () => {
                   <form onSubmit={handleProfileUpdate} className="space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
-                        <label htmlFor="username" className="form-label">Имя пользователя</label>
+                        <label htmlFor="name" className="form-label">Имя пользователя</label>
                         <input
                           type="text"
-                          id="username"
-                          name="username"
-                          value={formData.username}
+                          id="name"
+                          name="name"
+                          value={formData.name}
                           onChange={handleChange}
                           className="input-field"
                           required
@@ -383,7 +460,7 @@ const Profile: NextPage = () => {
                         required
                       />
                       <p className="text-xs text-slate-400 mt-1">
-                        Пароль должен содержать минимум 8 символов, включая цифры и специальные символы
+                        Пароль должен содержать минимум 8 символов, включая как минимум одну цифру и один специальный символ (!@#$%^&*,.? и т.д.)
                       </p>
                     </div>
                     

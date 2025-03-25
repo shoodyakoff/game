@@ -8,6 +8,7 @@ import { initializeCharacter } from '../store/slices/characterSlice';
 import Head from 'next/head';
 import { AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/router';
+import { SessionProvider } from 'next-auth/react';
 
 // Компонент для выполнения инициализации
 function AppInitializer({ children }: { children: React.ReactNode }) {
@@ -21,12 +22,12 @@ function AppInitializer({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-function MyApp({ Component, pageProps }: AppProps) {
+function MyApp({ Component, pageProps: { session, ...pageProps } }: AppProps) {
   const router = useRouter();
 
   return (
-    <Provider store={store}>
-      <AppInitializer>
+    <SessionProvider session={session}>
+      <Provider store={store}>
         <Head>
           <title>GOTOGROW | Обучение через игры</title>
           <meta name="description" content="Обучающий игровой портал для развития профессиональных навыков через увлекательные игры и симуляции" />
@@ -51,8 +52,8 @@ function MyApp({ Component, pageProps }: AppProps) {
         <AnimatePresence mode="wait" initial={false}>
           <Component {...pageProps} key={router.route} />
         </AnimatePresence>
-      </AppInitializer>
-    </Provider>
+      </Provider>
+    </SessionProvider>
   );
 }
 

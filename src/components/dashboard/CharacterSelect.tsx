@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { useDispatch, useSelector } from 'react-redux';
 import { useRouter } from 'next/router';
+import { useSession } from 'next-auth/react';
+import axios from 'axios';
 import { selectCharacter } from '../../store/slices/characterSlice';
 import { RootState } from '../../store';
 
@@ -141,6 +143,7 @@ export const CharacterSelect: React.FC = () => {
   const router = useRouter();
   const { redirectTo } = router.query; 
   const currentCharacter = useSelector((state: RootState) => state.character.selectedCharacter);
+  const session = useSession();
   
   useEffect(() => {
     if (currentCharacter) {
@@ -152,18 +155,35 @@ export const CharacterSelect: React.FC = () => {
     setSelectedChar(character.id);
   };
 
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
     if (selectedChar) {
       const character = characters.find(c => c.id === selectedChar);
       if (character) {
-        dispatch(selectCharacter(character));
-        
-        // Если есть redirectTo, перенаправляем на эту страницу
-        if (redirectTo && typeof redirectTo === 'string') {
-          router.push(decodeURIComponent(redirectTo));
-        } else {
-          // Всегда перенаправляем на /levels (страница "Играть")
-          router.push('/levels');
+        try {
+          // Сохраняем в Redux для обратной совместимости
+          dispatch(selectCharacter(character));
+          
+          // Сохраняем выбор персонажа через API
+          const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
+          await axios.post(`${API_URL}/character/select`, {
+            characterId: character.id,
+            characterType: character.type
+          }, {
+            headers: { 'Content-Type': 'application/json' },
+            withCredentials: true // Для передачи cookies с сессией
+          });
+          
+          // После успешного сохранения перенаправляем
+          if (redirectTo && typeof redirectTo === 'string') {
+            router.push(decodeURIComponent(redirectTo));
+          } else {
+            // По умолчанию перенаправляем на /levels
+            router.push('/levels');
+          }
+        } catch (error) {
+          console.error('Ошибка при выборе персонажа:', error);
+          // Показываем сообщение об ошибке пользователю
+          alert('Произошла ошибка при сохранении персонажа. Пожалуйста, попробуйте снова.');
         }
       }
     }
