@@ -69,7 +69,7 @@ const Introduction: React.FC = () => {
         </ul>
       </section>
       
-      <div className={styles.actionButtons}>
+      <div className="flex justify-center mt-8">
         <button 
           className={styles.btnPrimary}
           onClick={handleContinue}

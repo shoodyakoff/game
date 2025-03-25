@@ -1,10 +1,10 @@
 #!/bin/bash
-# Скрипт для деплоя проекта на Timeweb
+# Скрипт для деплоя проекта на Timeweb (упрощенная версия)
 
 # Переменные (замените на свои)
 SERVER_USER="cf68523"
 SERVER_HOST="cf68523.tw1.ru"
-SERVER_PATH="/var/www/cf68523/data/www/cf68523.tw1.ru"
+SERVER_PATH="/home/cf68523/gotogrow/public_html"
 DOMAIN="cf68523.tw1.ru"
 
 # Цвета для вывода
@@ -24,99 +24,72 @@ if [ $? -ne 0 ]; then
 fi
 echo -e "${GREEN}Сборка успешно завершена${NC}"
 
-# 2. Создание архива для деплоя
+# 2. Подготовка файлов для деплоя
 echo -e "${YELLOW}Шаг 2: Подготовка файлов для деплоя...${NC}"
-mkdir -p deploy
-cp -r .next package.json package-lock.json public .env.production deploy/
-mv deploy/.env.production deploy/.env
+mkdir -p deploy-full
 
-# 3. Создание deploy-config.js для PM2
-cat > deploy/ecosystem.config.js << EOF
-module.exports = {
-  apps: [
-    {
-      name: 'game-portal',
-      script: 'node_modules/next/dist/bin/next',
-      args: 'start',
-      instances: 1,
-      autorestart: true,
-      watch: false,
-      max_memory_restart: '1G',
-      env: {
-        NODE_ENV: 'production',
-        PORT: 3000
-      }
-    }
-  ]
-};
+# Копируем все файлы, необходимые для работы Next.js
+cp -r .next deploy-full/
+cp -r public deploy-full/
+cp -r src deploy-full/         # Копируем исходный код (компоненты, страницы, хуки и т.д.)
+cp -r pages deploy-full/       # Страницы Next.js (если они находятся в корне, а не в src)
+cp -r components deploy-full/  # Компоненты (если они находятся в корне, а не в src)
+cp -r styles deploy-full/      # Стили (если они находятся в корне, а не в src)
+cp package.json package-lock.json next.config.js deploy-full/ 2>/dev/null || true
+cp .env.production deploy-full/.env 2>/dev/null || true
+
+# Создание .htaccess файла для Apache
+cat > deploy-full/.htaccess << EOF
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteBase /
+    
+    # Если файл или директория существуют, используй их напрямую
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    
+    # Для статичных файлов Next.js
+    RewriteRule ^_next/(.*)$ .next/$1 [L]
+    
+    # Для API маршрутов и других динамических страниц
+    RewriteRule ^(.*)$ index.php [L]
+</IfModule>
+EOF
+
+# Создание простого PHP файла для отображения статической страницы
+cat > deploy-full/index.php << EOF
+<?php
+// Отображение статической HTML страницы
+include './.next/server/pages/index.html';
+?>
 EOF
 
 echo -e "${GREEN}Файлы подготовлены${NC}"
 
-# 4. Создание архива
+# 3. Создание архива
 echo -e "${YELLOW}Шаг 3: Создание архива...${NC}"
-tar -czf deploy.tar.gz -C deploy .
+tar -czf deploy-full.tar.gz -C deploy-full .
 if [ $? -ne 0 ]; then
     echo -e "${RED}Ошибка при создании архива${NC}"
     exit 1
 fi
-echo -e "${GREEN}Архив создан${NC}"
+echo -e "${GREEN}Архив создан. Файл: deploy-full.tar.gz${NC}"
 
-# 5. Загрузка на сервер
-echo -e "${YELLOW}Шаг 4: Загрузка на сервер...${NC}"
-scp deploy.tar.gz $SERVER_USER@$SERVER_HOST:$SERVER_PATH/
-if [ $? -ne 0 ]; then
-    echo -e "${RED}Ошибка при загрузке файлов на сервер${NC}"
-    exit 1
-fi
-echo -e "${GREEN}Файлы успешно загружены${NC}"
+# 4. Выводим список директорий и важных файлов в архиве
+echo -e "${YELLOW}Содержимое архива (основные директории):${NC}"
+tar -tf deploy-full.tar.gz | grep -v "/$" | head -n 20
 
-# 6. Выполнение команд на сервере
-echo -e "${YELLOW}Шаг 5: Настройка на сервере...${NC}"
-ssh $SERVER_USER@$SERVER_HOST << EOF
-    cd $SERVER_PATH
-    
-    # Распаковка архива
-    tar -xzf deploy.tar.gz
-    rm deploy.tar.gz
-    
-    # Установка зависимостей
-    npm install --production
-    
-    # Настройка PM2
-    npx pm2 delete game-portal 2>/dev/null || true
-    npx pm2 start ecosystem.config.js
-    npx pm2 save
-    
-    echo "Деплой завершен"
-EOF
-
-if [ $? -ne 0 ]; then
-    echo -e "${RED}Ошибка при настройке на сервере${NC}"
-    exit 1
-fi
-
-echo -e "${GREEN}Деплой успешно завершен!${NC}"
-echo -e "${YELLOW}Не забудьте настроить Nginx и SSL сертификат на сервере${NC}"
-echo -e "Пример конфигурации Nginx:"
-echo -e "${YELLOW}-----------------------------------${NC}"
-echo -e "server {
-    listen 80;
-    server_name $DOMAIN www.$DOMAIN;
-    
-    location / {
-        proxy_pass http://localhost:3000;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade \$http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host \$host;
-        proxy_cache_bypass \$http_upgrade;
-    }
-}"
-echo -e "${YELLOW}-----------------------------------${NC}"
+echo -e "${YELLOW}Теперь вам нужно:${NC}"
+echo -e "1. Загрузить архив deploy-full.tar.gz на сервер через файловый менеджер Timeweb"
+echo -e "2. Распаковать архив в директорию public_html"
+echo -e "3. Настроить Node.js в панели управления Timeweb (если доступно)"
+echo -e "4. Установить зависимости: npm install --production"
+echo -e "5. Запустить приложение: npm start"
+echo -e ""
+echo -e "${RED}Важно:${NC} Для полноценной работы Next.js приложения с API маршрутами"
+echo -e "на шаред-хостинге может потребоваться использование VPS/VDS с Node.js"
 
 # Очистка временных файлов
-rm -rf deploy
-rm deploy.tar.gz 2>/dev/null || true
+rm -rf deploy-full
 
 echo -e "${GREEN}Готово!${NC}" 

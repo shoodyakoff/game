@@ -1,16 +1,17 @@
 import { useState } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
-import { useSelector, useDispatch } from 'react-redux';
+import { useSelector } from 'react-redux';
 import { motion } from 'framer-motion';
 import axios from 'axios';
-import { RootState } from '../../../store';
 import { getMe } from '../../../store/slices/authSlice';
+import type { RootState } from '../../../store';
+import { useAppDispatch } from '../../../store/hooks';
 
 // Заглушка для страницы создания персонажа
 export default function CreateCharacter() {
   const router = useRouter();
-  const dispatch = useDispatch();
+  const dispatch = useAppDispatch();
   const { user, token } = useSelector((state: RootState) => state.auth);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');

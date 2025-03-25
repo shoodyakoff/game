@@ -10,66 +10,75 @@ import UXAnalysisTheory from './stages/UXAnalysisTheory';
 import UXAnalysisPractice from './stages/UXAnalysisPractice';
 
 // Временные заглушки для остальных этапов
-const Introduction = () => (
+const Introduction = ({ onComplete }) => (
   <div className={styles.container}>
     <h1 className={styles.header}>Введение</h1>
     <p className={styles.text}>Добро пожаловать в первый уровень обучения продуктовому мышлению и UX-анализу!</p>
+    <button onClick={onComplete}>Начать</button>
   </div>
 );
 
-const TeamMeeting = () => (
+const TeamMeeting = ({ onComplete }) => (
   <div className={styles.container}>
     <h1 className={styles.header}>Встреча с командой</h1>
     <p className={styles.text}>Познакомьтесь с командой и узнайте детали задачи.</p>
+    <button onClick={onComplete}>Начать</button>
   </div>
 );
 
-const MetricsTheory = () => (
+const MetricsTheory = ({ onComplete }) => (
   <div className={styles.container}>
     <h1 className={styles.header}>Теория метрик</h1>
     <p className={styles.text}>Изучите основы анализа продуктовых метрик.</p>
+    <button onClick={onComplete}>Начать</button>
   </div>
 );
 
-const MetricsPractice = () => (
+const MetricsPractice = ({ onComplete }) => (
   <div className={styles.container}>
     <h1 className={styles.header}>Практика по метрикам</h1>
     <p className={styles.text}>Примените знания о метриках на практике.</p>
+    <button onClick={onComplete}>Начать</button>
   </div>
 );
 
-const DecisionMakingTheory = () => (
+const DecisionMakingTheory = ({ onComplete }) => (
   <div className={styles.container}>
     <h1 className={styles.header}>Теория принятия решений</h1>
     <p className={styles.text}>Изучите основы принятия решений на основе данных.</p>
+    <button onClick={onComplete}>Начать</button>
   </div>
 );
 
-const DecisionMakingPractice = () => (
+const DecisionMakingPractice = ({ onComplete }) => (
   <div className={styles.container}>
     <h1 className={styles.header}>Практика принятия решений</h1>
     <p className={styles.text}>Примените принципы принятия решений на практике.</p>
+    <button onClick={onComplete}>Начать</button>
   </div>
 );
 
-const Feedback = () => (
+const Feedback = ({ onComplete }) => (
   <div className={styles.container}>
     <h1 className={styles.header}>Обратная связь</h1>
     <p className={styles.text}>Получите обратную связь по вашему решению.</p>
+    <button onClick={onComplete}>Начать</button>
   </div>
 );
 
-const Quiz = () => (
+const Quiz = ({ onComplete }) => (
   <div className={styles.container}>
     <h1 className={styles.header}>Тест</h1>
     <p className={styles.text}>Проверьте свои знания, пройдя итоговый тест.</p>
+    <button onClick={onComplete}>Начать</button>
   </div>
 );
 
-const Completion = () => (
+const Completion = ({ onComplete }) => (
   <div className={styles.container}>
     <h1 className={styles.header}>Завершение уровня</h1>
     <p className={styles.text}>Поздравляем! Вы успешно прошли первый уровень.</p>
+    <button onClick={onComplete}>Начать следующий уровень</button>
   </div>
 );
 
@@ -119,31 +128,31 @@ const Level1 = () => {
   const renderStageContent = () => {
     switch (currentStage) {
       case LevelStage.INTRODUCTION:
-        return <Introduction />;
+        return <Introduction onComplete={handleNextStage} />;
       case LevelStage.TEAM_MEETING:
-        return <TeamMeeting />;
+        return <TeamMeeting onComplete={handleNextStage} />;
       case LevelStage.PRODUCT_MINDSET_THEORY:
-        return <ProductMindsetTheory />;
+        return <ProductMindsetTheory onComplete={handleNextStage} />;
       case LevelStage.UX_ANALYSIS_THEORY:
-        return <UXAnalysisTheory />;
+        return <UXAnalysisTheory onComplete={handleNextStage} />;
       case LevelStage.UX_ANALYSIS_PRACTICE:
-        return <UXAnalysisPractice />;
+        return <UXAnalysisPractice onComplete={handleNextStage} />;
       case LevelStage.METRICS_THEORY:
-        return <MetricsTheory />;
+        return <MetricsTheory onComplete={handleNextStage} />;
       case LevelStage.METRICS_PRACTICE:
-        return <MetricsPractice />;
+        return <MetricsPractice onComplete={handleNextStage} />;
       case LevelStage.DECISION_MAKING_THEORY:
-        return <DecisionMakingTheory />;
+        return <DecisionMakingTheory onComplete={handleNextStage} />;
       case LevelStage.DECISION_MAKING_PRACTICE:
-        return <DecisionMakingPractice />;
+        return <DecisionMakingPractice onComplete={handleNextStage} />;
       case LevelStage.FEEDBACK:
-        return <Feedback />;
+        return <Feedback onComplete={handleNextStage} />;
       case LevelStage.QUIZ:
-        return <Quiz />;
+        return <Quiz onComplete={handleNextStage} />;
       case LevelStage.COMPLETION:
-        return <Completion />;
+        return <Completion onComplete={handleNextStage} />;
       default:
-        return <Introduction />;
+        return <Introduction onComplete={handleNextStage} />;
     }
   };
 

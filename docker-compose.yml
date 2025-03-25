@@ -1,0 +1,37 @@
+version: '3'
+
+services:
+  nextjs-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    restart: always
+    environment:
+      - NODE_ENV=production
+      # Все переменные окружения берутся из .env.production
+      # Но вы можете переопределить их здесь при необходимости
+    volumes:
+      - nextjs_data:/app/.next/cache
+      - ./.env.production:/app/.env
+    networks:
+      - app-network
+
+  # Добавляем MongoDB для локальной разработки
+  mongodb:
+    image: mongo:latest
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  nextjs_data:
+  mongodb_data: 

@@ -3,7 +3,6 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { useEffect } from 'react';
 import ProtectedRoute from '../../components/auth/ProtectedRoute';
-import { Container } from '../../components/common/Container';
 import { CharacterSelect } from '../../components/dashboard/CharacterSelect';
 
 const Characters: NextPage = () => {
@@ -21,10 +20,10 @@ const Characters: NextPage = () => {
         <Head>
           <title>Выбор персонажа</title>
         </Head>
-        <Container>
+        <div className="container mx-auto px-4 py-8">
           <h1 className="text-3xl font-bold text-white pt-8 mb-6">Выбор персонажа</h1>
           <CharacterSelect />
-        </Container>
+        </div>
       </div>
     </ProtectedRoute>
   );

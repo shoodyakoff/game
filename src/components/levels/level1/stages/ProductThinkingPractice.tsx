@@ -132,20 +132,22 @@ const ProductThinkingPractice = ({ onComplete }: ProductThinkingPracticeProps) =
           Выберите одну и получите обратную связь о её качестве.
         </p>
         
-        <div className={styles.problemOptions}>
+        <div className="space-y-4 mb-6">
           {problemStatements.map(problem => (
             <div 
               key={problem.id} 
-              className={`${styles.problemOption} ${selectedProblem === problem.id ? styles.problemOptionSelected : ''}`}
+              className={`p-4 rounded-lg cursor-pointer transition-all ${selectedProblem === problem.id ? 'bg-indigo-600 border-indigo-500 text-white' : 'bg-slate-700 border border-slate-600 text-slate-300 hover:bg-slate-600'}`}
               onClick={() => handleProblemSelection(problem.id)}
             >
-              <p className={styles.problemText}>{problem.text}</p>
+              <p className="text-inherit">{problem.text}</p>
             </div>
           ))}
         </div>
         
-        <div className={styles.orDivider}>
-          <span>или</span>
+        <div className="flex items-center justify-center my-6">
+          <div className="flex-1 h-px bg-slate-600"></div>
+          <span className="px-4 text-slate-400">или</span>
+          <div className="flex-1 h-px bg-slate-600"></div>
         </div>
         
         <h2 className={styles.subheader}>Задание 2: Сформулируйте проблему самостоятельно</h2>
@@ -171,22 +173,27 @@ const ProductThinkingPractice = ({ onComplete }: ProductThinkingPracticeProps) =
         </button>
         
         {submitted && feedback && (
-          <div className={`${styles.feedbackBox} ${styles[`feedback${feedbackQuality.charAt(0).toUpperCase() + feedbackQuality.slice(1)}`]}`}>
-            <h3 className={styles.feedbackTitle}>
+          <div className={`mt-6 p-4 rounded-lg border ${
+            feedbackQuality === 'excellent' ? 'bg-green-900/30 border-green-500 text-green-400' : 
+            feedbackQuality === 'good' ? 'bg-blue-900/30 border-blue-500 text-blue-400' : 
+            feedbackQuality === 'average' ? 'bg-yellow-900/30 border-yellow-500 text-yellow-400' : 
+            'bg-red-900/30 border-red-500 text-red-400'
+          }`}>
+            <h3 className="text-lg font-semibold mb-2">
               {feedbackQuality === 'excellent' ? 'Отлично!' : 
                feedbackQuality === 'good' ? 'Хорошо!' : 
                feedbackQuality === 'average' ? 'Неплохо!' : 'Можно лучше!'}
             </h3>
-            <p className={styles.feedbackText}>{feedback}</p>
+            <p className="text-slate-300">{feedback}</p>
           </div>
         )}
       </section>
       
       <section className={styles.section}>
         <h2 className={styles.subheader}>Практические рекомендации</h2>
-        <div className={styles.tipsBox}>
-          <h3 className={styles.tipsTitle}>Как улучшить формулировку проблемы:</h3>
-          <ul className={styles.tipsList}>
+        <div className="bg-indigo-900/30 border border-indigo-800 rounded-lg p-4 mt-4 mb-6">
+          <h3 className="text-lg font-semibold text-indigo-400 mb-2">Как улучшить формулировку проблемы:</h3>
+          <ul className={styles.list}>
             <li>
               <strong>Будьте конкретны:</strong> Вместо "много пользователей" используйте "40% новых пользователей"
             </li>

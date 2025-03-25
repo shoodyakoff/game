@@ -11,6 +11,9 @@ const Feedback = () => {
   const [comment, setComment] = useState('');
   const [submitted, setSubmitted] = useState(false);
 
+  // Проверка валидности формы - оценка должна быть выбрана
+  const isValid = rating !== null;
+
   const concepts = [
     { id: 'product_mindset', name: 'Продуктовое мышление' },
     { id: 'ux_analysis', name: 'UX-анализ' },
@@ -66,14 +69,12 @@ const Feedback = () => {
     router.push(`/level1?stage=${nextStage}`);
   };
 
-  const isSubmitDisabled = rating === null;
-
   return (
     <div className={styles.container}>
       <h1 className={styles.header}>Обратная связь</h1>
       
       {!submitted ? (
-        <div className={styles.feedbackForm}>
+        <div className="space-y-6">
           <section className={styles.section}>
             <h2 className={styles.subheader}>Ваше мнение важно для нас!</h2>
             <p className={styles.text}>
@@ -81,63 +82,65 @@ const Feedback = () => {
               Ваша обратная связь поможет нам сделать курс еще лучше.
             </p>
             
-            <div className={styles.feedbackSection}>
-              <h3 className={styles.feedbackSectionTitle}>Общая оценка уровня</h3>
-              <div className={styles.ratingContainer}>
+            <div className="bg-slate-700 p-4 rounded-lg border border-slate-600 mb-6">
+              <h3 className="text-lg font-semibold text-indigo-400 mb-4">Общая оценка уровня</h3>
+              <div className="flex justify-center space-x-4 mb-2">
                 {[1, 2, 3, 4, 5].map(value => (
                   <button
                     key={value}
-                    className={`${styles.ratingButton} ${rating === value ? styles.ratingActive : ''}`}
+                    className={`w-10 h-10 rounded-full flex items-center justify-center border ${rating === value ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-slate-800 text-slate-300 border-slate-600 hover:bg-slate-700'}`}
                     onClick={() => handleRatingChange(value)}
                   >
                     {value}
                   </button>
                 ))}
               </div>
-              <div className={styles.ratingLabels}>
+              <div className="flex justify-between text-sm text-slate-400">
                 <span>Совсем не понравилось</span>
                 <span>Очень понравилось</span>
               </div>
             </div>
             
-            <div className={styles.feedbackSection}>
-              <h3 className={styles.feedbackSectionTitle}>Какие концепции были наиболее сложными для понимания?</h3>
-              <div className={styles.conceptsGrid}>
+            <div className="bg-slate-700 p-4 rounded-lg border border-slate-600 mb-6">
+              <h3 className="text-lg font-semibold text-indigo-400 mb-4">Какие концепции были наиболее сложными для понимания?</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {concepts.map(concept => (
-                  <div key={concept.id} className={styles.conceptCheckbox}>
+                  <div key={concept.id} className="flex items-center space-x-2">
                     <input
                       type="checkbox"
                       id={`difficulty-${concept.id}`}
                       checked={difficultyConcepts.includes(concept.id)}
                       onChange={() => handleDifficultyConceptsChange(concept.id)}
+                      className="h-4 w-4 text-indigo-600 border-slate-500 rounded focus:ring-indigo-500"
                     />
-                    <label htmlFor={`difficulty-${concept.id}`}>{concept.name}</label>
+                    <label htmlFor={`difficulty-${concept.id}`} className="text-slate-300">{concept.name}</label>
                   </div>
                 ))}
               </div>
             </div>
             
-            <div className={styles.feedbackSection}>
-              <h3 className={styles.feedbackSectionTitle}>Какие концепции были наиболее полезными для вас?</h3>
-              <div className={styles.conceptsGrid}>
+            <div className="bg-slate-700 p-4 rounded-lg border border-slate-600 mb-6">
+              <h3 className="text-lg font-semibold text-indigo-400 mb-4">Какие концепции были наиболее полезными для вас?</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {concepts.map(concept => (
-                  <div key={concept.id} className={styles.conceptCheckbox}>
+                  <div key={concept.id} className="flex items-center space-x-2">
                     <input
                       type="checkbox"
                       id={`useful-${concept.id}`}
                       checked={usefulConcepts.includes(concept.id)}
                       onChange={() => handleUsefulConceptsChange(concept.id)}
+                      className="h-4 w-4 text-indigo-600 border-slate-500 rounded focus:ring-indigo-500"
                     />
-                    <label htmlFor={`useful-${concept.id}`}>{concept.name}</label>
+                    <label htmlFor={`useful-${concept.id}`} className="text-slate-300">{concept.name}</label>
                   </div>
                 ))}
               </div>
             </div>
             
-            <div className={styles.feedbackSection}>
-              <h3 className={styles.feedbackSectionTitle}>Дополнительные комментарии (необязательно)</h3>
+            <div className="bg-slate-700 p-4 rounded-lg border border-slate-600 mb-6">
+              <h3 className="text-lg font-semibold text-indigo-400 mb-4">Дополнительные комментарии (необязательно)</h3>
               <textarea
-                className={styles.commentTextarea}
+                className="w-full p-3 border border-slate-600 bg-slate-800 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 min-h-[120px]"
                 placeholder="Расскажите нам подробнее о вашем опыте прохождения уровня. Что понравилось больше всего? Что можно улучшить?"
                 value={comment}
                 onChange={handleCommentChange}
@@ -145,7 +148,7 @@ const Feedback = () => {
               />
             </div>
             
-            <div className={styles.feedbackSection}>
+            <div className="flex justify-end mt-6">
               <button 
                 className={styles.btnPrimary}
                 onClick={handleSubmit}
@@ -157,25 +160,25 @@ const Feedback = () => {
           </section>
         </div>
       ) : (
-        <div className={styles.thankYouContainer}>
+        <div className="bg-slate-800 rounded-lg shadow-lg border border-slate-700 p-6">
           <section className={styles.section}>
-            <div className={styles.thankYouContent}>
-              <h2 className={styles.thankYouTitle}>Спасибо за ваш отзыв!</h2>
-              <p className={styles.thankYouText}>
+            <div className="text-center py-8">
+              <h2 className="text-2xl font-bold text-indigo-400 mb-4">Спасибо за ваш отзыв!</h2>
+              <p className={styles.text}>
                 Мы высоко ценим ваше мнение и используем обратную связь для постоянного улучшения нашего курса.
                 Ваши комментарии помогут нам сделать обучение более эффективным и интересным для будущих учеников.
               </p>
               
-              <div className={styles.completionMessage}>
-                <h3 className={styles.completionMessageTitle}>Что дальше?</h3>
-                <p className={styles.completionMessageText}>
+              <div className="bg-indigo-900/30 border border-indigo-800 rounded-lg p-6 my-8">
+                <h3 className="text-xl font-semibold text-indigo-400 mb-3">Что дальше?</h3>
+                <p className={styles.text}>
                   Теперь вас ждет небольшой тест для проверки полученных знаний. 
                   После его прохождения вы завершите уровень и получите сертификат!
                 </p>
               </div>
               
               <button
-                className={styles.continueButton}
+                className={styles.btnPrimary}
                 onClick={handleContinue}
               >
                 Перейти к тесту

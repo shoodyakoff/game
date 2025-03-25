@@ -1,6 +1,5 @@
 import React from 'react';
 import { styles } from '../common/styles';
-import MentorTip from '../../../MentorTip';
 
 type UXAnalysisTheoryProps = {
   onComplete: () => void;
@@ -158,9 +157,9 @@ const UXAnalysisTheory = ({ onComplete }: UXAnalysisTheoryProps) => {
           В контексте проблемы с созданием задач в TaskMaster, мы можем использовать различные методы UX-анализа:
         </p>
         
-        <div className={styles.applicationExample}>
-          <h3 className={styles.applicationTitle}>Анализ пользовательского пути создания задачи</h3>
-          <p className={styles.applicationText}>
+        <div className="bg-slate-700 p-4 rounded-lg border border-slate-600 mb-6">
+          <h3 className="text-lg font-semibold text-indigo-400 mb-2">Анализ пользовательского пути создания задачи</h3>
+          <p className={styles.text}>
             Мы можем детально изучить все шаги, которые пользователь проходит от момента нажатия кнопки 
             "Создать задачу" до успешного завершения процесса. На каждом шаге мы анализируем:
           </p>
@@ -170,23 +169,23 @@ const UXAnalysisTheory = ({ onComplete }: UXAnalysisTheoryProps) => {
             <li>Типичные ошибки и проблемы</li>
             <li>Эмоциональное состояние пользователя</li>
           </ul>
-          <p className={styles.applicationText}>
+          <p className={styles.text}>
             Это поможет нам выявить конкретные шаги, на которых пользователи сталкиваются с наибольшими трудностями.
           </p>
         </div>
         
-        <div className={styles.applicationExample}>
-          <h3 className={styles.applicationTitle}>Юзабилити-тестирование с различными сегментами пользователей</h3>
-          <p className={styles.applicationText}>
+        <div className="bg-slate-700 p-4 rounded-lg border border-slate-600 mb-6">
+          <h3 className="text-lg font-semibold text-indigo-400 mb-2">Юзабилити-тестирование с различными сегментами пользователей</h3>
+          <p className={styles.text}>
             Мы можем провести тестирование с представителями разных сегментов (новые, опытные, мобильные пользователи), 
             чтобы понять, с какими конкретными проблемами сталкивается каждый сегмент при создании задач. 
             Это поможет нам разработать решения, учитывающие потребности различных групп пользователей.
           </p>
         </div>
         
-        <div className={styles.applicationExample}>
-          <h3 className={styles.applicationTitle}>Анализ метрик и воронки конверсии</h3>
-          <p className={styles.applicationText}>
+        <div className="bg-slate-700 p-4 rounded-lg border border-slate-600 mb-6">
+          <h3 className="text-lg font-semibold text-indigo-400 mb-2">Анализ метрик и воронки конверсии</h3>
+          <p className={styles.text}>
             Изучая метрики по каждому шагу создания задачи, мы можем количественно оценить масштаб проблем 
             и их влияние на бизнес-показатели. Например, мы можем узнать, что 30% пользователей отказываются 
             от создания задачи на втором шаге (указание расширенных параметров), что приводит к потере 
@@ -195,9 +194,9 @@ const UXAnalysisTheory = ({ onComplete }: UXAnalysisTheoryProps) => {
         </div>
       </section>
       
-      <div className={styles.mentorTip}>
-        <h3 className={styles.mentorTipTitle}>Совет ментора:</h3>
-        <p className={styles.mentorTipText}>
+      <div className="bg-yellow-900/30 border-l-4 border-yellow-500 p-4 rounded-r-md my-6 relative">
+        <h3 className="font-bold text-yellow-500 mb-2">Совет ментора:</h3>
+        <p className={styles.text}>
           UX-анализ наиболее эффективен, когда вы сочетаете различные методы. Количественные данные (метрики) 
           говорят о масштабе проблем, а качественные исследования (интервью, юзабилити-тестирование) 
           помогают понять причины их возникновения. Не полагайтесь только на один источник информации — 

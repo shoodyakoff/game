@@ -145,14 +145,11 @@ const Quiz = () => {
   };
 
   const handleSubmit = () => {
-    // Проверяем, что на все вопросы есть ответы
-    const answeredQuestions = Object.keys(userAnswers).length;
-    if (answeredQuestions < questions.length) {
-      alert(`Пожалуйста, ответьте на все вопросы. Осталось ответить на ${questions.length - answeredQuestions} вопросов.`);
-      return;
-    }
-    
     setShowResults(true);
+  };
+
+  const isAllQuestionsAnswered = () => {
+    return questions.every(question => userAnswers[question.id] !== undefined);
   };
 
   const toggleExplanation = (questionId: number) => {
@@ -171,14 +168,11 @@ const Quiz = () => {
       }
     });
     
-    return {
-      score: correctAnswers,
-      percentage: (correctAnswers / questions.length) * 100
-    };
+    return Math.round((correctAnswers / questions.length) * 100);
   };
 
   const getFeedback = () => {
-    const { percentage } = calculateScore();
+    const percentage = calculateScore();
     
     if (percentage >= 90) {
       return "Отлично! Вы продемонстрировали глубокое понимание продуктового мышления, UX-анализа, работы с метриками и принятия решений.";
@@ -202,47 +196,46 @@ const Quiz = () => {
       <h1 className={styles.header}>Тестирование знаний</h1>
       
       <section className={styles.section}>
-        <div className={styles.quizInstructions}>
-          <p>Этот тест проверит ваши знания по основным темам уровня:</p>
-          <ul>
+        <div className="bg-slate-700 p-4 rounded-lg border border-slate-600 mb-6">
+          <p className={styles.text}>Этот тест проверит ваши знания по основным темам уровня:</p>
+          <ul className={styles.list}>
             <li>Продуктовое мышление</li>
             <li>UX-анализ</li>
             <li>Работа с метриками</li>
             <li>Принятие решений</li>
           </ul>
-          <p>Выберите один правильный ответ для каждого вопроса и нажмите "Проверить результаты" после завершения теста.</p>
+          <p className={styles.text}>Выберите один правильный ответ для каждого вопроса и нажмите "Проверить результаты" после завершения теста.</p>
         </div>
         
-        <div className={styles.quizContainer}>
-          {questions.map((question, idx) => (
-            <div key={question.id} className={styles.questionContainer}>
-              <h3 className={styles.questionText}>
-                {idx + 1}. {question.text}
+        <div className="space-y-8 mb-8">
+          {questions.map(question => (
+            <div key={question.id} className="bg-slate-700 p-4 rounded-lg border border-slate-600 mb-6">
+              <h3 className="text-lg font-semibold text-indigo-400 mb-4">
+                {question.id}. {question.text}
               </h3>
               
-              <div className={styles.optionsContainer}>
+              <div className="space-y-3">
                 {question.options.map((option, optionIdx) => (
-                  <div key={optionIdx} className={styles.optionItem}>
+                  <div key={optionIdx} className="flex items-start">
                     <input
                       type="radio"
-                      id={`q${question.id}-o${optionIdx}`}
+                      id={`q${question.id}-a${optionIdx}`}
                       name={`question-${question.id}`}
                       value={optionIdx}
                       checked={userAnswers[question.id] === optionIdx}
                       onChange={() => handleAnswerSelect(question.id, optionIdx)}
+                      className="mt-1 mr-3"
                       disabled={showResults}
                     />
                     <label 
-                      htmlFor={`q${question.id}-o${optionIdx}`}
-                      className={
-                        showResults 
-                          ? optionIdx === question.correctAnswer 
-                            ? styles.correctOption 
-                            : userAnswers[question.id] === optionIdx 
-                              ? styles.incorrectOption 
-                              : '' 
-                          : ''
-                      }
+                      htmlFor={`q${question.id}-a${optionIdx}`}
+                      className={`text-slate-300 cursor-pointer flex-1 ${
+                        showResults && userAnswers[question.id] === optionIdx && optionIdx === question.correctAnswer
+                          ? 'text-green-400 font-medium'
+                          : showResults && userAnswers[question.id] === optionIdx && optionIdx !== question.correctAnswer
+                            ? 'text-red-400 line-through'
+                            : ''
+                      }`}
                     >
                       {option}
                     </label>
@@ -251,14 +244,14 @@ const Quiz = () => {
               </div>
               
               {showResults && (
-                <div className={styles.resultFeedback}>
-                  <div className={styles.answerStatus}>
+                <div className="mt-4 border-t border-slate-600 pt-3">
+                  <div className="mb-2">
                     {userAnswers[question.id] === question.correctAnswer 
-                      ? <span className={styles.correctAnswer}>Правильно!</span> 
-                      : <span className={styles.incorrectAnswer}>Неправильно</span>
+                      ? <span className="text-green-400 font-medium">Правильно!</span>
+                      : <span className="text-red-400 font-medium">Неправильно</span>
                     }
-                    <button 
-                      className={styles.explanationToggle}
+                    <button
+                      className="ml-3 text-sm text-indigo-400 hover:text-indigo-300"
                       onClick={() => toggleExplanation(question.id)}
                     >
                       {showExplanations[question.id] ? 'Скрыть объяснение' : 'Показать объяснение'}
@@ -266,7 +259,7 @@ const Quiz = () => {
                   </div>
                   
                   {showExplanations[question.id] && (
-                    <div className={styles.explanationText}>
+                    <div className="bg-slate-800 p-3 rounded text-slate-300 text-sm">
                       {question.explanation}
                     </div>
                   )}
@@ -274,32 +267,31 @@ const Quiz = () => {
               )}
             </div>
           ))}
-          
-          {!showResults && (
-            <button 
-              className={styles.submitButton}
-              onClick={handleSubmit}
-            >
-              Проверить результаты
-            </button>
-          )}
-          
-          {showResults && (
-            <div className={styles.quizResults}>
-              <h2 className={styles.resultsHeader}>
-                Ваш результат: {calculateScore().score} из {questions.length} ({Math.round(calculateScore().percentage)}%)
-              </h2>
-              <p className={styles.resultsFeedback}>{getFeedback()}</p>
-              
-              <button 
-                className={styles.resetButton}
-                onClick={resetQuiz}
-              >
-                Пройти тест заново
-              </button>
-            </div>
-          )}
         </div>
+        
+        {!showResults ? (
+          <button
+            className={styles.btnPrimary}
+            onClick={handleSubmit}
+            disabled={!isAllQuestionsAnswered()}
+          >
+            Проверить результаты
+          </button>
+        ) : (
+          <div className="text-center p-6 bg-slate-700 rounded-lg border border-slate-600">
+            <h2 className="text-xl font-bold text-indigo-400 mb-4">
+              Ваш результат: {calculateScore()}%
+            </h2>
+            <p className="text-slate-300 mb-4">{getFeedback()}</p>
+            
+            <button
+              className={styles.btnSecondary}
+              onClick={resetQuiz}
+            >
+              Пройти тест заново
+            </button>
+          </div>
+        )}
       </section>
     </div>
   );

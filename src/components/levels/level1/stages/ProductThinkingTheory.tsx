@@ -24,14 +24,14 @@ const ProductThinkingTheory = () => {
       <section className={styles.section}>
         <h2 className={styles.subheader}>Ключевые принципы продуктового мышления</h2>
         
-        <div className={styles.principle}>
-          <h3 className={styles.principleTitle}>1. Фокус на решении реальных проблем пользователей</h3>
-          <p className={styles.principleText}>
+        <div className="bg-slate-700 p-4 rounded-lg border border-slate-600 mb-6">
+          <h3 className="text-lg font-semibold text-indigo-400 mb-2">1. Фокус на решении реальных проблем пользователей</h3>
+          <p className={styles.text}>
             Успешные продукты решают конкретные проблемы пользователей лучше, чем существующие решения. 
             Продуктовый менеджер должен уметь выявлять эти проблемы и оценивать их значимость для пользователей.
           </p>
-          <div className={styles.principleExample}>
-            <p>
+          <div className="bg-slate-800 p-3 rounded mt-3">
+            <p className={styles.text}>
               <strong>Пример:</strong> Вместо добавления новой функции "потому что конкурент её добавил", 
               продуктовый менеджер сначала определяет, решает ли эта функция реальную проблему пользователей 
               и насколько эта проблема значима.
@@ -39,28 +39,28 @@ const ProductThinkingTheory = () => {
           </div>
         </div>
         
-        <div className={styles.principle}>
-          <h3 className={styles.principleTitle}>2. Приоритет бизнес-целей и метрик</h3>
-          <p className={styles.principleText}>
+        <div className="bg-slate-700 p-4 rounded-lg border border-slate-600 mb-6">
+          <h3 className="text-lg font-semibold text-indigo-400 mb-2">2. Приоритет бизнес-целей и метрик</h3>
+          <p className={styles.text}>
             Продуктовое мышление включает понимание того, как изменения в продукте влияют на ключевые 
             бизнес-метрики и помогают достичь стратегических целей компании.
           </p>
-          <div className={styles.principleExample}>
-            <p>
+          <div className="bg-slate-800 p-3 rounded mt-3">
+            <p className={styles.text}>
               <strong>Пример:</strong> При принятии решения о редизайне формы регистрации, продуктовый менеджер 
               оценивает, как это повлияет на конверсию, удержание пользователей и, в конечном итоге, на доход.
             </p>
           </div>
         </div>
         
-        <div className={styles.principle}>
-          <h3 className={styles.principleTitle}>3. Итеративный подход и эксперименты</h3>
-          <p className={styles.principleText}>
+        <div className="bg-slate-700 p-4 rounded-lg border border-slate-600 mb-6">
+          <h3 className="text-lg font-semibold text-indigo-400 mb-2">3. Итеративный подход и эксперименты</h3>
+          <p className={styles.text}>
             Продуктовое мышление предполагает постоянное тестирование гипотез, анализ результатов 
             и быстрое внесение изменений на основе полученных данных.
           </p>
-          <div className={styles.principleExample}>
-            <p>
+          <div className="bg-slate-800 p-3 rounded mt-3">
+            <p className={styles.text}>
               <strong>Пример:</strong> Вместо полного редизайна всего продукта, команда проводит A/B-тестирование 
               отдельных изменений, измеряет их эффективность и принимает решение о дальнейшем развитии 
               на основе результатов.
@@ -68,14 +68,14 @@ const ProductThinkingTheory = () => {
           </div>
         </div>
         
-        <div className={styles.principle}>
-          <h3 className={styles.principleTitle}>4. Баланс краткосрочных и долгосрочных целей</h3>
-          <p className={styles.principleText}>
+        <div className="bg-slate-700 p-4 rounded-lg border border-slate-600 mb-6">
+          <h3 className="text-lg font-semibold text-indigo-400 mb-2">4. Баланс краткосрочных и долгосрочных целей</h3>
+          <p className={styles.text}>
             Продуктовое мышление требует умения балансировать между быстрыми победами, 
             которые дают немедленный результат, и стратегическими инвестициями в будущее продукта.
           </p>
-          <div className={styles.principleExample}>
-            <p>
+          <div className="bg-slate-800 p-3 rounded mt-3">
+            <p className={styles.text}>
               <strong>Пример:</strong> Команда решает потратить время на рефакторинг кода и улучшение 
               архитектуры продукта, несмотря на то, что это не принесет немедленного роста метрик, 
               но создаст основу для более быстрого развития в будущем.
@@ -83,14 +83,14 @@ const ProductThinkingTheory = () => {
           </div>
         </div>
         
-        <div className={styles.principle}>
-          <h3 className={styles.principleTitle}>5. Системное мышление</h3>
-          <p className={styles.principleText}>
+        <div className="bg-slate-700 p-4 rounded-lg border border-slate-600 mb-6">
+          <h3 className="text-lg font-semibold text-indigo-400 mb-2">5. Системное мышление</h3>
+          <p className={styles.text}>
             Продуктовое мышление включает понимание того, как различные части продукта 
             взаимодействуют между собой и как изменение одного элемента может повлиять на другие.
           </p>
-          <div className={styles.principleExample}>
-            <p>
+          <div className="bg-slate-800 p-3 rounded mt-3">
+            <p className={styles.text}>
               <strong>Пример:</strong> При добавлении новой функции "Коллективные задачи" продуктовый менеджер 
               анализирует, как это повлияет на существующие функции управления задачами, уведомления, 
               навигацию и другие элементы продукта.
@@ -106,27 +106,27 @@ const ProductThinkingTheory = () => {
           проявляется следующим образом:
         </p>
         
-        <div className={styles.practicalExample}>
-          <h3 className={styles.exampleTitle}>Определение проблемы</h3>
-          <p className={styles.exampleText}>
+        <div className="bg-slate-700 p-4 rounded-lg border border-slate-600 mb-6">
+          <h3 className="text-lg font-semibold text-indigo-400 mb-2">Определение проблемы</h3>
+          <p className={styles.text}>
             Вместо общей формулировки "пользователям сложно создавать задачи", продуктовый менеджер 
             конкретизирует проблему: "Новые пользователи тратят в среднем 3 минуты на создание задачи, 
             и 40% из них не завершают процесс из-за сложности формы и неясности обязательных полей."
           </p>
         </div>
         
-        <div className={styles.practicalExample}>
-          <h3 className={styles.exampleTitle}>Анализ данных</h3>
-          <p className={styles.exampleText}>
+        <div className="bg-slate-700 p-4 rounded-lg border border-slate-600 mb-6">
+          <h3 className="text-lg font-semibold text-indigo-400 mb-2">Анализ данных</h3>
+          <p className={styles.text}>
             Продуктовый менеджер анализирует воронку создания задач, время, затрачиваемое на каждом шаге, 
             точки отказа и сегментирует данные по типам пользователей (новые/опытные, мобильные/десктоп). 
             Это помогает выявить ключевые болевые точки.
           </p>
         </div>
         
-        <div className={styles.practicalExample}>
-          <h3 className={styles.exampleTitle}>Формирование гипотез</h3>
-          <p className={styles.exampleText}>
+        <div className="bg-slate-700 p-4 rounded-lg border border-slate-600 mb-6">
+          <h3 className="text-lg font-semibold text-indigo-400 mb-2">Формирование гипотез</h3>
+          <p className={styles.text}>
             На основе данных и обратной связи от пользователей формируются гипотезы: 
             "Упрощение формы и добавление контекстных подсказок снизит время создания задачи на 30% 
             и повысит конверсию на 15%." или "Разделение процесса на логические шаги повысит 
@@ -134,18 +134,18 @@ const ProductThinkingTheory = () => {
           </p>
         </div>
         
-        <div className={styles.practicalExample}>
-          <h3 className={styles.exampleTitle}>Разработка решений</h3>
-          <p className={styles.exampleText}>
+        <div className="bg-slate-700 p-4 rounded-lg border border-slate-600 mb-6">
+          <h3 className="text-lg font-semibold text-indigo-400 mb-2">Разработка решений</h3>
+          <p className={styles.text}>
             Вместо реализации первой пришедшей в голову идеи, команда генерирует несколько альтернативных 
             решений, оценивает их по критериям эффективности, технической сложности, времени реализации 
             и соответствия бизнес-целям.
           </p>
         </div>
         
-        <div className={styles.practicalExample}>
-          <h3 className={styles.exampleTitle}>Тестирование и итерации</h3>
-          <p className={styles.exampleText}>
+        <div className="bg-slate-700 p-4 rounded-lg border border-slate-600 mb-6">
+          <h3 className="text-lg font-semibold text-indigo-400 mb-2">Тестирование и итерации</h3>
+          <p className={styles.text}>
             Команда проводит A/B-тестирование наиболее перспективного решения, анализирует результаты 
             и вносит корректировки. Продуктовый менеджер устанавливает четкие критерии успеха: 
             сокращение времени создания задачи, повышение конверсии, улучшение удовлетворенности пользователей.
@@ -153,9 +153,9 @@ const ProductThinkingTheory = () => {
         </div>
       </section>
       
-      <div className={styles.mentorTip}>
-        <h3 className={styles.mentorTipTitle}>Совет ментора:</h3>
-        <p className={styles.mentorTipText}>
+      <div className="bg-yellow-900/30 border-l-4 border-yellow-500 p-4 rounded-r-md my-6 relative">
+        <h3 className="font-bold text-yellow-500 mb-2">Совет ментора:</h3>
+        <p className={styles.text}>
           Продуктовое мышление — это навык, который развивается с практикой. Старайтесь всегда задавать себе 
           вопросы: "Какую проблему мы решаем?", "Почему это важно для пользователя?", "Как это влияет на 
           бизнес?", "Есть ли лучший способ решить эту проблему?". Развивайте привычку принимать решения 

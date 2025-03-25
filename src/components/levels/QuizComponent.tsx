@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 
 export type QuizQuestion = {
-  id: number;
+  id: string | number;
   question: string;
   options: {
     id: string;
@@ -14,12 +14,12 @@ export type QuizQuestion = {
 
 type QuizComponentProps = {
   questions: QuizQuestion[];
-  onComplete: (score: number, answers: Record<number, string>) => void;
+  onComplete: (score: number, answers: Record<string | number, string>) => void;
 };
 
 const QuizComponent: React.FC<QuizComponentProps> = ({ questions, onComplete }) => {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [selectedOptions, setSelectedOptions] = useState<Record<number, string>>({});
+  const [selectedOptions, setSelectedOptions] = useState<Record<string | number, string>>({});
   const [showExplanation, setShowExplanation] = useState(false);
   const [isQuizComplete, setIsQuizComplete] = useState(false);
   const [score, setScore] = useState(0);

@@ -111,27 +111,27 @@ const DecisionMakingPractice = ({ onComplete }: DecisionMakingPracticeProps) => 
       case 'context':
         return (
           <div className={styles.tabContent}>
-            <h3 className={styles.tabContentTitle}>Бизнес-контекст решения</h3>
-            <div className={styles.contextContainer}>
-              <div className={styles.contextItem}>
-                <h4 className={styles.contextItemTitle}>Временные рамки</h4>
-                <p className={styles.contextItemText}>{businessContext.timeline}</p>
+            <h3 className={styles.subheader}>Бизнес-контекст решения</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+              <div className="bg-slate-700 p-4 rounded-lg">
+                <h4 className="text-lg font-medium text-indigo-300 mb-2">Временные рамки</h4>
+                <p className={styles.text}>{businessContext.timeline}</p>
               </div>
-              <div className={styles.contextItem}>
-                <h4 className={styles.contextItemTitle}>Доступные ресурсы</h4>
-                <p className={styles.contextItemText}>{businessContext.resources}</p>
+              <div className="bg-slate-700 p-4 rounded-lg">
+                <h4 className="text-lg font-medium text-indigo-300 mb-2">Доступные ресурсы</h4>
+                <p className={styles.text}>{businessContext.resources}</p>
               </div>
-              <div className={styles.contextItem}>
-                <h4 className={styles.contextItemTitle}>Приоритеты</h4>
-                <p className={styles.contextItemText}>{businessContext.priorities}</p>
+              <div className="bg-slate-700 p-4 rounded-lg">
+                <h4 className="text-lg font-medium text-indigo-300 mb-2">Приоритеты</h4>
+                <p className={styles.text}>{businessContext.priorities}</p>
               </div>
-              <div className={styles.contextItem}>
-                <h4 className={styles.contextItemTitle}>Ограничения</h4>
-                <p className={styles.contextItemText}>{businessContext.constraints}</p>
+              <div className="bg-slate-700 p-4 rounded-lg">
+                <h4 className="text-lg font-medium text-indigo-300 mb-2">Ограничения</h4>
+                <p className={styles.text}>{businessContext.constraints}</p>
               </div>
-              <div className={styles.contextItem}>
-                <h4 className={styles.contextItemTitle}>Целевые показатели</h4>
-                <p className={styles.contextItemText}>{businessContext.kpis}</p>
+              <div className="bg-slate-700 p-4 rounded-lg">
+                <h4 className="text-lg font-medium text-indigo-300 mb-2">Целевые показатели</h4>
+                <p className={styles.text}>{businessContext.kpis}</p>
               </div>
             </div>
           </div>
@@ -139,40 +139,40 @@ const DecisionMakingPractice = ({ onComplete }: DecisionMakingPracticeProps) => 
       case 'alternatives':
         return (
           <div className={styles.tabContent}>
-            <h3 className={styles.tabContentTitle}>Альтернативные решения</h3>
-            <div className={styles.alternativesContainer}>
+            <h3 className={styles.subheader}>Альтернативные решения</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
               {decisionAlternatives.map(alternative => (
-                <div key={alternative.id} className={styles.alternativeCard}>
-                  <h4 className={styles.alternativeTitle}>{alternative.name}</h4>
-                  <p className={styles.alternativeDescription}>{alternative.description}</p>
+                <div key={alternative.id} className="bg-slate-700 p-5 rounded-lg border border-slate-600">
+                  <h4 className="text-lg font-semibold text-indigo-400 mb-3">{alternative.name}</h4>
+                  <p className={styles.text}>{alternative.description}</p>
                   
-                  <div className={styles.alternativeSections}>
-                    <div className={styles.alternativeSection}>
-                      <h5 className={styles.alternativeSectionTitle}>Влияние на пользователей</h5>
-                      <p className={styles.alternativeSectionText}>{alternative.impact.users}</p>
+                  <div className="mt-4 space-y-4">
+                    <div>
+                      <h5 className="font-medium text-indigo-300 mb-1">Влияние на пользователей</h5>
+                      <p className={styles.text}>{alternative.impact.users}</p>
                     </div>
-                    <div className={styles.alternativeSection}>
-                      <h5 className={styles.alternativeSectionTitle}>Влияние на конверсию</h5>
-                      <p className={styles.alternativeSectionText}>{alternative.impact.conversion}</p>
+                    <div>
+                      <h5 className="font-medium text-indigo-300 mb-1">Влияние на конверсию</h5>
+                      <p className={styles.text}>{alternative.impact.conversion}</p>
                     </div>
-                    <div className={styles.alternativeSection}>
-                      <h5 className={styles.alternativeSectionTitle}>Влияние на удержание</h5>
-                      <p className={styles.alternativeSectionText}>{alternative.impact.retention}</p>
+                    <div>
+                      <h5 className="font-medium text-indigo-300 mb-1">Влияние на удержание</h5>
+                      <p className={styles.text}>{alternative.impact.retention}</p>
                     </div>
                   </div>
                   
-                  <div className={styles.alternativeSections}>
-                    <div className={styles.alternativeSection}>
-                      <h5 className={styles.alternativeSectionTitle}>Преимущества</h5>
-                      <ul className={styles.alternativeList}>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+                    <div>
+                      <h5 className="font-medium text-indigo-300 mb-1">Преимущества</h5>
+                      <ul className={styles.list}>
                         {alternative.pros.map((pro, index) => (
                           <li key={index}>{pro}</li>
                         ))}
                       </ul>
                     </div>
-                    <div className={styles.alternativeSection}>
-                      <h5 className={styles.alternativeSectionTitle}>Недостатки</h5>
-                      <ul className={styles.alternativeList}>
+                    <div>
+                      <h5 className="font-medium text-indigo-300 mb-1">Недостатки</h5>
+                      <ul className={styles.list}>
                         {alternative.cons.map((con, index) => (
                           <li key={index}>{con}</li>
                         ))}
@@ -180,18 +180,18 @@ const DecisionMakingPractice = ({ onComplete }: DecisionMakingPracticeProps) => 
                     </div>
                   </div>
                   
-                  <div className={styles.alternativeSections}>
-                    <div className={styles.alternativeSection}>
-                      <h5 className={styles.alternativeSectionTitle}>Реализация</h5>
-                      <div className={styles.implementationDetails}>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+                    <div>
+                      <h5 className="font-medium text-indigo-300 mb-1">Реализация</h5>
+                      <div className="mt-2 space-y-1 text-slate-300">
                         <p><strong>Сложность:</strong> {alternative.implementation.complexity}</p>
                         <p><strong>Сроки:</strong> {alternative.implementation.timeframe}</p>
                         <p><strong>Ресурсы:</strong> {alternative.implementation.resources}</p>
                       </div>
                     </div>
-                    <div className={styles.alternativeSection}>
-                      <h5 className={styles.alternativeSectionTitle}>Ключевые метрики</h5>
-                      <div className={styles.metricsDetails}>
+                    <div>
+                      <h5 className="font-medium text-indigo-300 mb-1">Ключевые метрики</h5>
+                      <div className="mt-2 space-y-1 text-slate-300">
                         <p><strong>Основные:</strong> {alternative.metrics.primary.join(', ')}</p>
                         <p><strong>Второстепенные:</strong> {alternative.metrics.secondary.join(', ')}</p>
                       </div>
@@ -205,29 +205,29 @@ const DecisionMakingPractice = ({ onComplete }: DecisionMakingPracticeProps) => 
       case 'evaluation':
         return (
           <div className={styles.tabContent}>
-            <h3 className={styles.tabContentTitle}>Оценка альтернатив</h3>
-            <div className={styles.evaluationMatrix}>
-              <table className={styles.evaluationTable}>
-                <thead>
+            <h3 className={styles.subheader}>Оценка альтернатив</h3>
+            <div className="overflow-x-auto rounded-lg border border-slate-600 my-4">
+              <table className="w-full border-collapse bg-slate-800">
+                <thead className="bg-slate-700 text-indigo-300">
                   <tr>
-                    <th>Критерий / Альтернатива</th>
-                    <th>Вес</th>
+                    <th className="p-3 text-left">Критерий / Альтернатива</th>
+                    <th className="p-3">Вес</th>
                     {decisionAlternatives.map(alt => (
-                      <th key={alt.id}>{alt.name}</th>
+                      <th key={alt.id} className="p-3">{alt.name}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   {decisionCriteria.map(criterion => (
-                    <tr key={criterion.id}>
-                      <td title={criterion.description}>{criterion.name}</td>
-                      <td>{criterion.weight}</td>
+                    <tr key={criterion.id} className="border-t border-slate-600">
+                      <td className="p-3" title={criterion.description}>{criterion.name}</td>
+                      <td className="p-3 text-center">{criterion.weight}</td>
                       {decisionAlternatives.map(alt => (
-                        <td key={`${alt.id}-${criterion.id}`}>
+                        <td key={`${alt.id}-${criterion.id}`} className="p-3 text-center">
                           <select 
                             value={alternativeRatings[alt.id]?.[criterion.id] || 0}
                             onChange={(e) => handleRatingChange(alt.id, criterion.id, parseInt(e.target.value))}
-                            className={styles.ratingSelect}
+                            className={styles.input}
                           >
                             <option value={0}>Выберите оценку</option>
                             <option value={1}>1 - Очень низкая</option>
@@ -245,10 +245,10 @@ const DecisionMakingPractice = ({ onComplete }: DecisionMakingPracticeProps) => 
                       ))}
                     </tr>
                   ))}
-                  <tr className={styles.weighedScoreRow}>
-                    <td colSpan={2}><strong>Взвешенная оценка</strong></td>
+                  <tr className="bg-slate-700 font-bold">
+                    <td colSpan={2} className="p-3"><strong>Взвешенная оценка</strong></td>
                     {decisionAlternatives.map(alt => (
-                      <td key={`score-${alt.id}`} className={styles.scoreCell}>
+                      <td key={`score-${alt.id}`} className="p-3 text-center">
                         <strong>{weightedScores[alt.id] || 0}</strong>
                       </td>
                     ))}
@@ -261,12 +261,12 @@ const DecisionMakingPractice = ({ onComplete }: DecisionMakingPracticeProps) => 
       case 'decision':
         return (
           <div className={styles.tabContent}>
-            <h3 className={styles.tabContentTitle}>Принятие решения</h3>
-            <div className={styles.decisionContainer}>
-              <div className={styles.alternativeSelection}>
-                <h4 className={styles.selectionTitle}>Выберите оптимальное решение:</h4>
+            <h3 className={styles.subheader}>Принятие решения</h3>
+            <div className="space-y-6">
+              <div className="bg-slate-700 p-4 rounded-lg">
+                <h4 className="text-lg font-medium text-indigo-400 mb-3">Выберите оптимальное решение:</h4>
                 {decisionAlternatives.map(alt => (
-                  <div key={alt.id} className={styles.selectionOption}>
+                  <div key={alt.id} className="flex items-center mb-2 p-2 hover:bg-slate-600 rounded">
                     <input 
                       type="radio" 
                       id={`alt-${alt.id}`} 
@@ -274,8 +274,9 @@ const DecisionMakingPractice = ({ onComplete }: DecisionMakingPracticeProps) => 
                       value={alt.id}
                       checked={selectedAlternative === alt.id}
                       onChange={() => handleAlternativeSelect(alt.id)}
+                      className="mr-2"
                     />
-                    <label htmlFor={`alt-${alt.id}`}>
+                    <label htmlFor={`alt-${alt.id}`} className="flex-grow">
                       {alt.name} 
                       {weightedScores[alt.id] ? ` (Взвешенная оценка: ${weightedScores[alt.id]})` : ''}
                     </label>
@@ -283,10 +284,10 @@ const DecisionMakingPractice = ({ onComplete }: DecisionMakingPracticeProps) => 
                 ))}
               </div>
               
-              <div className={styles.justificationSection}>
-                <h4 className={styles.justificationTitle}>Обоснуйте ваше решение:</h4>
+              <div className="mt-6">
+                <h4 className="text-lg font-medium text-indigo-400 mb-3">Обоснуйте ваше решение:</h4>
                 <textarea 
-                  className={styles.justificationTextarea}
+                  className={styles.textarea}
                   value={justification}
                   onChange={handleJustificationChange}
                   placeholder="Опишите, почему вы выбрали данное решение. Учтите бизнес-контекст, результаты оценки альтернатив, а также потенциальные риски и преимущества. Минимум 100 символов."
@@ -295,7 +296,7 @@ const DecisionMakingPractice = ({ onComplete }: DecisionMakingPracticeProps) => 
               </div>
               
               <button 
-                className={styles.submitButton}
+                className={`${styles.btnPrimary} mt-6 ${selectedAlternative === null || justification.trim().length < 100 ? styles.btnDisabled : ''}`}
                 onClick={handleSubmitDecision}
                 disabled={selectedAlternative === null || justification.trim().length < 100}
               >
@@ -304,13 +305,13 @@ const DecisionMakingPractice = ({ onComplete }: DecisionMakingPracticeProps) => 
             </div>
             
             {showFeedback && (
-              <div className={styles.feedbackContainer}>
-                <h3 className={styles.feedbackTitle}>Обратная связь на ваше решение</h3>
-                <p className={styles.feedbackText}>{feedbackTexts[feedbackLevel]}</p>
+              <div className="mt-8 bg-slate-700 p-6 rounded-lg border border-slate-600">
+                <h3 className="text-xl font-semibold text-indigo-400 mb-4">Обратная связь на ваше решение</h3>
+                <p className={styles.text}>{feedbackTexts[feedbackLevel]}</p>
                 
-                <div className={styles.mentorTip}>
-                  <h4 className={styles.mentorTipTitle}>Совет ментора:</h4>
-                  <p className={styles.mentorTipText}>
+                <div className="bg-slate-600 p-4 rounded-lg mt-6">
+                  <h4 className="text-lg font-medium text-indigo-300 mb-2">Совет ментора:</h4>
+                  <p className={styles.text}>
                     В процессе принятия решений в продуктовой разработке ключевую роль играет баланс между краткосрочными 
                     и долгосрочными целями. Правильное решение должно учитывать не только текущие ограничения (время, 
                     ресурсы, бюджет), но и соответствовать стратегическим целям продукта. Также важно основывать 
@@ -338,7 +339,7 @@ const DecisionMakingPractice = ({ onComplete }: DecisionMakingPracticeProps) => 
           альтернативные решения, учесть бизнес-контекст и выбрать наиболее подходящий вариант.
         </p>
         
-        <div className={styles.tabsContainer}>
+        <div className="mt-6 bg-slate-800 rounded-lg shadow-md border border-slate-700 p-4">
           <div className={styles.tabs}>
             <button 
               className={`${styles.tabButton} ${activeTab === 'context' ? styles.activeTab : ''}`}

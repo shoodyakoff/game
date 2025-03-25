@@ -5,6 +5,8 @@ import { RootState } from '../../store';
 import { selectSelectedCharacter } from '../../store/slices/characterSlice';
 import { checkAuthStatus } from '../../store/slices/authSlice';
 import { motion } from 'framer-motion';
+import { AnyAction } from '@reduxjs/toolkit';
+import { ThunkDispatch } from 'redux-thunk';
 
 interface ProtectedRouteProps {
   children: ReactNode;
@@ -18,7 +20,7 @@ interface ProtectedRouteProps {
  */
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, characterRequired = false }) => {
   const router = useRouter();
-  const dispatch = useDispatch();
+  const dispatch = useDispatch<ThunkDispatch<RootState, unknown, AnyAction>>();
   const { isAuthenticated, loading } = useSelector((state: RootState) => state.auth);
   const selectedCharacter = useSelector(selectSelectedCharacter);
   const [isInitialized, setIsInitialized] = useState(false);

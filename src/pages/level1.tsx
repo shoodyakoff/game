@@ -12,7 +12,7 @@ import UxAnalysis from '../components/levels/level1/stages/UxAnalysis';
 // Другие импорты будут добавлены по мере создания компонентов
 
 // Маппинг этапов на соответствующие компоненты
-const stageComponents: Record<LevelStage, React.FC> = {
+const stageComponents: Partial<Record<LevelStage, React.FC>> = {
   [LevelStage.INTRODUCTION]: Introduction,
   [LevelStage.TEAM_MEETING]: TeamMeeting,
   [LevelStage.METRICS_ANALYSIS]: MetricsPractice,
@@ -40,7 +40,16 @@ const Level1Page: React.FC = () => {
   }, [router.isReady, router.query.stage]);
 
   // Получение компонента для текущего этапа
-  const CurrentStageComponent = stageComponents[currentStage];
+  const CurrentStageComponent = stageComponents[currentStage] || (() => (
+    <div className="text-center py-8">
+      <h2 className="text-xl font-semibold text-gray-700">
+        Этап "{stageNames[currentStage]}" находится в разработке
+      </h2>
+      <p className="mt-2 text-gray-500">
+        Пожалуйста, вернитесь позже или выберите другой этап.
+      </p>
+    </div>
+  ));
   
   return (
     <>

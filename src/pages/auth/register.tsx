@@ -2,15 +2,16 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import Link from 'next/link';
-import { useDispatch, useSelector } from 'react-redux';
+import { useSelector } from 'react-redux';
 import { motion } from 'framer-motion';
 
 import { register, clearError } from '../../store/slices/authSlice';
 import type { RootState } from '../../store';
+import { useAppDispatch } from '../../store/hooks';
 
 export default function Register() {
   const router = useRouter();
-  const dispatch = useDispatch();
+  const dispatch = useAppDispatch();
   const { loading, error, isAuthenticated } = useSelector((state: RootState) => state.auth);
 
   // Состояние формы
