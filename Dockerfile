@@ -1,40 +1,62 @@
 # Этап 1: Установка зависимостей и сборка приложения
-FROM node:18-alpine AS builder
+FROM node:18-alpine AS base
 
+# Добавляем обновления безопасности
+RUN apk update && apk upgrade && \
+    apk add --no-cache dumb-init
+
+# Установка зависимостей только при первой сборке
+FROM base AS deps
 WORKDIR /app
 
-# Копируем package.json и package-lock.json
-COPY package*.json ./
-
-# Устанавливаем зависимости
-RUN npm ci
-
-# Копируем исходный код
-COPY . .
-
-# Копируем .env.production если существует или создаем пустой файл
-RUN if [ -f .env.production ]; then echo "Using existing .env.production"; else touch .env.production; fi
+# Копирование package.json и установка зависимостей
+COPY package.json package-lock.json* ./
+RUN npm install --legacy-peer-deps && \
+    npm prune --production && \
+    npm cache clean --force
 
 # Сборка приложения
-RUN npm run build
+FROM base AS builder
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+
+# Проверяем и очищаем env файлы от чувствительных данных
+RUN if [ -f .env.production ]; then echo "Using existing .env.production"; else touch .env.production; fi
+RUN if [ -f .env.local ]; then echo "Removing .env.local"; rm .env.local; fi
+RUN if [ -f .env.sync ]; then echo "Removing .env.sync"; rm .env.sync; fi
+
+# Создание оптимизированной сборки
+RUN npm run build && \
+    npm prune --production
+
+# Сканирование уязвимостей (опционально, закомментировано для ускорения сборки)
+# RUN npm audit --production
 
 # Этап 2: Запуск приложения
-FROM node:18-alpine AS runner
-
+FROM base AS runner
 WORKDIR /app
 
-# Устанавливаем только production зависимости
-COPY --from=builder /app/package*.json ./
-RUN npm ci --only=production
+# Создаем непривилегированного пользователя
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nextjs -u 1001 -G nodejs
 
-# Копируем сборку и статические файлы
-COPY --from=builder /app/.next ./.next
-COPY --from=builder /app/public ./public
-COPY --from=builder /app/next.config.js ./next.config.js
-# Не копируем .env.production, так как он будет примонтирован как том
+# Установка для продакшен
+ENV NODE_ENV=production
+
+# Установка прав доступа на директории
+COPY --from=builder --chown=nextjs:nodejs /app/public ./public
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+
+# Настройка безопасности: не запускать как root
+USER nextjs
 
 # Expose порт для доступа к приложению
 EXPOSE 3000
 
+# Используем dumb-init для правильной обработки сигналов
+ENTRYPOINT ["/usr/bin/dumb-init", "--"]
+
 # Команда запуска приложения
-CMD ["npm", "start"] 
+CMD ["node", "server.js"] 

@@ -8,8 +8,8 @@ import { useRouter } from 'next/router';
 
 import ProtectedRoute from '../../components/auth/ProtectedRoute';
 import { RootState } from '../../store';
-import { logout } from '../../store/slices/authSlice';
 import { selectSelectedCharacter } from '../../store/slices/characterSlice';
+import LogoutButton from '../../components/LogoutButton';
 
 const Levels: NextPage = () => {
   const router = useRouter();
@@ -46,15 +46,14 @@ const Levels: NextPage = () => {
     }
   }, [isClient, selectedCharacterInfo, selectedCharacter, router]);
   
-  const handleLogout = () => {
-    dispatch(logout());
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('user');
-      localStorage.removeItem('token');
-      router.push('/login');
+  useEffect(() => {
+    if (isClient) {
+      if (!selectedCharacterInfo && selectedCharacter) {
+        router.push('/character');
+      }
     }
-  };
-
+  }, [isClient, selectedCharacterInfo, selectedCharacter, router]);
+  
   // Функция для получения статуса пройденности уровня
   const resetLevelProgress = (levelId: string) => {
     const updatedCompletedLevels = { ...completedLevels };
@@ -62,7 +61,7 @@ const Levels: NextPage = () => {
     setCompletedLevels(updatedCompletedLevels);
     localStorage.setItem('completedLevels', JSON.stringify(updatedCompletedLevels));
   };
-
+  
   // Функция для проверки доступности уровня
   const isLevelAvailable = (levelId: number, completedLevels: any) => {
     // Уровень 1 всегда доступен
@@ -166,7 +165,7 @@ const Levels: NextPage = () => {
   ];
   
   return (
-    <ProtectedRoute characterRequired={true}>
+    <ProtectedRoute requireCharacter={true}>
       <div className="min-h-screen bg-slate-900">
         <Head>
           <title>Уровни | GOTOGROW</title>
@@ -215,12 +214,7 @@ const Levels: NextPage = () => {
                   Привет, {userInfo?.username || userInfo?.email}
                 </span>
               )}
-              <button 
-                onClick={handleLogout}
-                className="bg-slate-700 hover:bg-slate-600 text-white text-sm py-2 px-4 rounded-lg transition-colors"
-              >
-                Выйти
-              </button>
+              <LogoutButton />
             </div>
           </div>
         </header>
@@ -406,7 +400,6 @@ const Levels: NextPage = () => {
                       <div className="flex space-x-2">
                         {level.unlocked && (
                           <button
-                            onClick={() => resetLevelProgress(level.id.toString())}
                             className="inline-flex items-center text-sm bg-red-600 hover:bg-red-700 text-white px-2 py-1 rounded-lg transition-colors"
                             title="Сбросить прогресс"
                           >

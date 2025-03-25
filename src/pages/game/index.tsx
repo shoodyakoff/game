@@ -4,7 +4,7 @@ import Head from 'next/head';
 
 const Game: NextPage = () => {
   return (
-    <ProtectedRoute characterRequired={true}>
+    <ProtectedRoute requireCharacter={true}>
       <div className="min-h-screen bg-slate-900">
         <Head>
           <title>Игра | GOTOGROW</title>

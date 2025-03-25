@@ -1,4 +1,4 @@
-import { useSelector, useDispatch } from 'react-redux';
+import { useSelector } from 'react-redux';
 import { NextPage } from 'next';
 import Head from 'next/head';
 import Link from 'next/link';
@@ -6,12 +6,11 @@ import { motion } from 'framer-motion';
 import { useState, useEffect } from 'react';
 
 import ProtectedRoute from '../../components/auth/ProtectedRoute';
+import LogoutButton from '../../components/LogoutButton';
 import { RootState } from '../../store';
-import { logout } from '../../store/slices/authSlice';
 import { selectSelectedCharacter } from '../../store/slices/characterSlice';
 
 const Dashboard: NextPage = () => {
-  const dispatch = useDispatch();
   const { user } = useSelector((state: RootState) => state.auth);
   const selectedCharacter = useSelector(selectSelectedCharacter);
   const [isClient, setIsClient] = useState(false);
@@ -20,10 +19,6 @@ const Dashboard: NextPage = () => {
     // Указываем, что мы находимся на клиенте
     setIsClient(true);
   }, []);
-  
-  const handleLogout = () => {
-    dispatch(logout());
-  };
   
   // Фиктивные данные для прогресса
   const progressData = {
@@ -87,12 +82,7 @@ const Dashboard: NextPage = () => {
                   Привет, {user?.username || user?.email}
                 </span>
               )}
-              <button 
-                onClick={handleLogout}
-                className="bg-slate-700 hover:bg-slate-600 text-white text-sm py-2 px-4 rounded-lg transition-colors"
-              >
-                Выйти
-              </button>
+              <LogoutButton />
             </div>
           </div>
         </header>

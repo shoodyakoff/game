@@ -1,27 +1,120 @@
-# Game Portal - Деплой на Timeweb
+# Game Portal
 
-Инструкция по развертыванию проекта на хостинге Timeweb.
+Игровой портал с авторизацией, выбором персонажа и игровыми механиками.
 
-## Подготовка к деплою
+## Настройка окружения
 
-1. Клонируйте репозиторий:
+### Для локальной разработки
+
+1. **Клонирование репозитория:**
+   ```bash
+   git clone https://github.com/username/game.git
+   cd game
+   ```
+
+2. **Создание файлов окружения:**
+   - Скопируйте `.env.example` в `.env.local` для локальной разработки
+   - Скопируйте `.env.example` в `.env.production` для продакшена
+   - Заполните необходимые переменные окружения в обоих файлах
+
+3. **Запуск с использованием Docker (рекомендуется):**
+   ```bash
+   # Локальная разработка с MongoDB в Docker
+   npm run docker:up
+   
+   # Заполнение локальной БД тестовыми данными (только первый раз)
+   npm run db:seed
+   
+   # ИЛИ синхронизация с продакшеном (требуется MongoDB Tools)
+   npm run db:sync
+   ```
+
+4. **Разработка без Docker:**
+   ```bash
+   # Установка зависимостей
+   npm install
+   
+   # Запуск Next.js в режиме разработки
+   npm run dev
+   ```
+
+5. **Доступ к приложению:**
+   - Откройте http://localhost:3000 в браузере
+   - Для входа используйте тестовые учетные данные:
+     - Обычный пользователь: `s.hoodyakoff@gmail.com` / `Test123!`
+     - Администратор: `admin@example.com` / `Admin123!`
+
+### Управление Docker-контейнерами
+
 ```bash
-git clone https://github.com/yourusername/game-portal.git
-cd game-portal
+# Запуск контейнеров
+npm run docker:up
+
+# Остановка контейнеров
+npm run docker:down
+
+# Перезапуск контейнеров
+npm run docker:restart
+
+# Просмотр логов
+npm run docker:logs
 ```
 
-2. Установите зависимости:
+### Работа с базой данных
+
 ```bash
-npm install
+# Заполнение локальной БД тестовыми данными
+npm run db:seed
+
+# Синхронизация локальной БД с MongoDB Atlas
+npm run db:sync
 ```
 
-3. Создайте файл `.env.production` (шаблон уже подготовлен в репозитории):
-```bash
-# Отредактируйте файл .env.production и укажите правильные данные:
-# - Замените строку подключения к MongoDB
-# - Установите сложный JWT_SECRET 
-# - Укажите правильный домен в NEXT_PUBLIC_API_URL и NEXT_PUBLIC_APP_URL
-```
+## Структура проекта
+
+- `src/` - исходный код приложения
+  - `pages/` - страницы Next.js
+  - `components/` - React-компоненты
+  - `server/` - серверный код
+    - `models/` - модели MongoDB
+    - `utils/` - утилиты
+  - `styles/` - стили приложения
+- `public/` - статические файлы
+- `scripts/` - скрипты для управления БД
+- `mongo-init/` - скрипты инициализации MongoDB
+
+## Рабочие окружения
+
+### Локальная разработка
+
+- **База данных:** MongoDB в Docker-контейнере
+- **URL:** http://localhost:3000
+- **Файл конфигурации:** `.env.local`
+- **Docker файл:** `docker-compose.yml`
+
+### Продакшен
+
+- **База данных:** MongoDB Atlas
+- **URL:** https://shoodyakoff-game-13b1.twc1.net
+- **Файл конфигурации:** `.env.production`
+- **Docker файл:** `docker-compose.prod.yml`
+
+## Деплой
+
+1. **Сборка для продакшена:**
+   ```bash
+   npm run build
+   ```
+
+2. **Запуск в режиме продакшена:**
+   ```bash
+   npm run start
+   ```
+
+3. **Запуск через Docker в продакшене:**
+   ```bash
+   docker-compose -f docker-compose.prod.yml up -d
+   ```
 
 ## Настройка сервера Timeweb
 

@@ -42,10 +42,22 @@ export const login = createAsyncThunk(
   'auth/login',
   async ({ email, password, remember = false }: LoginCredentials, { rejectWithValue }) => {
     try {
+      // Добавляем timeout для fetch запроса
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 секунд таймаут
+      
       const response = await axios.post(`${API_URL}/auth/login`, {
         email,
         password
+      }, {
+        timeout: 10000, // Добавляем таймаут в 10 секунд
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        }
       });
+      
+      clearTimeout(timeoutId);
       
       // Сохраняем в localStorage всегда, чтобы сессия сохранялась между обновлениями страницы
       if (typeof window !== 'undefined') {
@@ -55,9 +67,25 @@ export const login = createAsyncThunk(
       
       return response.data;
     } catch (error: any) {
+      console.error('Login error details:', error);
+      
+      // Детализируем логирование ошибки
+      if (error.response) {
+        // Сервер вернул ответ с кодом ошибки
+        console.error('Server response data:', error.response.data);
+        console.error('Server response status:', error.response.status);
+        console.error('Server response headers:', error.response.headers);
+      } else if (error.request) {
+        // Запрос был сделан, но нет ответа
+        console.error('Request made but no response:', error.request);
+      } else {
+        // Что-то еще вызвало ошибку
+        console.error('Error message:', error.message);
+      }
+      
       return rejectWithValue(
         error.response?.data?.message || 
-        'Ошибка входа. Пожалуйста, проверьте введенные данные.'
+        'Ошибка входа. Пожалуйста, проверьте введенные данные и подключение к серверу.'
       );
     }
   }

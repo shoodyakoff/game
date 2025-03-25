@@ -21,6 +21,8 @@
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
 
 # env files
 .env
@@ -43,4 +45,40 @@ deploy/
 
 # Приватные ключи
 s
-s.pub 
+s.pub
+*id_rsa*
+*id_ed25519*
+*.key
+*.pem
+*.crt
+*.cer
+*.der
+*.p7b
+*.p7c
+*.p12
+*.pfx
+
+# Логи
+logs/
+*.log
+
+# Временные файлы
+.temp/
+.tmp/
+.cache/
+
+# Директория для бэкапов MongoDB
+/backup/
+/mongo-data/
+
+# Чувствительные скрипты MongoDB
+/mongo-init/sensitive*.js
+
+# Дополнительные env файлы с чувствительными данными
+.env.sync
+.env.secrets
+.env.production.local
+
+# Временные файлы с секретами
+*.secrets.js
+*.secrets.json 
