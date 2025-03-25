@@ -35,4 +35,12 @@ yarn-error.log*
 
 # typescript
 *.tsbuildinfo
-next-env.d.ts 
+next-env.d.ts
+
+# Архивы для деплоя
+*.tar.gz
+deploy/
+
+# Приватные ключи
+s
+s.pub 
