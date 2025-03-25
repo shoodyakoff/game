@@ -50,7 +50,9 @@ function MyApp({ Component, pageProps: { session, ...pageProps } }: AppProps) {
           <meta property="twitter:image" content="https://gameportal.example.com/images/twitter-image.jpg" />
         </Head>
         <AnimatePresence mode="wait" initial={false}>
-          <Component {...pageProps} key={router.route} />
+          <AppInitializer>
+            <Component {...pageProps} key={router.route} />
+          </AppInitializer>
         </AnimatePresence>
       </Provider>
     </SessionProvider>

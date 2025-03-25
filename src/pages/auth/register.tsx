@@ -2,17 +2,15 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import Link from 'next/link';
-import { useSelector } from 'react-redux';
+import { signIn, useSession } from 'next-auth/react';
 import { motion } from 'framer-motion';
-
-import { register, clearError } from '../../store/slices/authSlice';
-import type { RootState } from '../../store';
-import { useAppDispatch } from '../../store/hooks';
+import axios from 'axios';
 
 export default function Register() {
   const router = useRouter();
-  const dispatch = useAppDispatch();
-  const { loading, error, isAuthenticated } = useSelector((state: RootState) => state.auth);
+  const { data: session, status } = useSession();
+  const isLoading = status === 'loading';
+  const isAuthenticated = status === 'authenticated';
 
   // Состояние формы
   const [formData, setFormData] = useState({
@@ -30,14 +28,17 @@ export default function Register() {
     confirmPassword: '',
   });
   
-  // Состояние для отслеживания попытки отправки формы
-  const [formSubmitted, setFormSubmitted] = useState(false);
+  // Состояние для ошибок API
+  const [error, setError] = useState('');
+  
+  // Состояние загрузки
+  const [loading, setLoading] = useState(false);
   
   // Состояние для отслеживания клиентского рендеринга
   const [isClient, setIsClient] = useState(false);
 
   // Получаем URL для перенаправления после регистрации
-  const { returnUrl } = router.query;
+  const { returnUrl, callbackUrl } = router.query;
   
   // Устанавливаем флаг клиентского рендеринга
   useEffect(() => {
@@ -47,27 +48,24 @@ export default function Register() {
   // Если пользователь уже авторизован, перенаправляем его
   useEffect(() => {
     if (isAuthenticated) {
-      const redirectUrl = returnUrl 
-        ? decodeURIComponent(returnUrl as string) 
-        : '/dashboard';
+      const redirectUrl = returnUrl || callbackUrl || '/dashboard';
+      let url = typeof redirectUrl === 'string' ? redirectUrl : '/dashboard';
       
       // Проверяем, не содержит ли returnUrl путь аутентификации
-      // и не является ли он цепочкой с returnUrl=
-      const isValidRedirect = typeof redirectUrl === 'string' && 
-                              !redirectUrl.includes('/auth/') && 
-                              !redirectUrl.includes('returnUrl=');
+      if (url.includes('/auth/') || url.includes('returnUrl=')) {
+        url = '/dashboard';
+      }
       
-      router.push(isValidRedirect ? redirectUrl : '/dashboard');
+      router.push(url);
     }
-  }, [isAuthenticated, returnUrl, router]);
+  }, [isAuthenticated, returnUrl, callbackUrl, router]);
 
   // Очищаем ошибки при изменении полей формы
   useEffect(() => {
-    if (error && formSubmitted) {
-      dispatch(clearError());
-      setFormSubmitted(false);
+    if (error) {
+      setError('');
     }
-  }, [formData, error, dispatch, formSubmitted]);
+  }, [formData]);
 
   // Проверка пароля при каждом изменении
   useEffect(() => {
@@ -130,6 +128,15 @@ export default function Register() {
       errors.password = 'Пароль должен содержать не менее 6 символов';
       isValid = false;
     }
+    
+    // Проверка наличия цифр и специальных символов
+    const hasNumber = /\d/.test(formData.password);
+    const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(formData.password);
+    
+    if (!hasNumber || !hasSpecial) {
+      errors.password = 'Пароль должен содержать хотя бы одну цифру и один специальный символ';
+      isValid = false;
+    }
 
     // Проверка совпадения паролей
     if (formData.password !== formData.confirmPassword) {
@@ -150,12 +157,38 @@ export default function Register() {
       return;
     }
     
-    setFormSubmitted(true);
-    dispatch(register({ 
-      username: formData.username, 
-      email: formData.email, 
-      password: formData.password 
-    }));
+    setLoading(true);
+    setError('');
+    
+    try {
+      // Регистрация пользователя через API
+      const response = await axios.post('/api/auth/register', {
+        username: formData.username,
+        email: formData.email,
+        password: formData.password
+      });
+      
+      if (response.data.success) {
+        // После успешной регистрации выполняем вход
+        const result = await signIn('credentials', {
+          redirect: false,
+          email: formData.email,
+          password: formData.password,
+          callbackUrl: (callbackUrl as string) || '/dashboard'
+        });
+        
+        if (result?.error) {
+          setError(result.error);
+        } else if (result?.url) {
+          router.push(result.url);
+        }
+      }
+    } catch (err: any) {
+      console.error('Ошибка регистрации:', err);
+      setError(err.response?.data?.message || 'Произошла ошибка при регистрации. Попробуйте позже.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -269,6 +302,9 @@ export default function Register() {
                   placeholder="••••••••"
                   style={{ pointerEvents: 'auto' }}
                 />
+                <p className="text-xs text-gray-400 mt-1">
+                  Минимум 6 символов, включая цифры и спецсимволы
+                </p>
                 {validationErrors.password && (
                   <p className="form-error">{validationErrors.password}</p>
                 )}
@@ -298,36 +334,29 @@ export default function Register() {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="btn-primary w-full"
+                  className="btn-primary w-full flex justify-center items-center"
                   style={{ pointerEvents: 'auto' }}
                 >
                   {loading ? (
-                    <span className="flex items-center justify-center">
-                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
-                      Регистрация...
-                    </span>
-                  ) : (
-                    'Зарегистрироваться'
-                  )}
+                    <span className="spinner mr-2"></span>
+                  ) : null}
+                  Зарегистрироваться
                 </button>
               </div>
             </form>
 
-            <div className="mt-6 text-center text-sm">
-              <span className="text-gray-400">Уже есть аккаунт? </span>
-              <Link href="/auth/login" className="text-blue-400 hover:text-blue-300 font-medium">
-                Войти
-              </Link>
+            <div className="mt-6 text-center">
+              <p className="text-gray-400">
+                Уже есть аккаунт?{' '}
+                <Link 
+                  href="/auth/login" 
+                  className="text-indigo-400 hover:text-indigo-300 transition"
+                  style={{ pointerEvents: 'auto' }}
+                >
+                  Войти
+                </Link>
+              </p>
             </div>
-          </div>
-          
-          <div className="mt-8 text-center text-sm text-gray-400">
-            <Link href="/" className="hover:text-white">
-              ← Вернуться на главную
-            </Link>
           </div>
         </motion.div>
       </motion.div>

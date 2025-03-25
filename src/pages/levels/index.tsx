@@ -5,11 +5,14 @@ import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
+import { useSession } from 'next-auth/react';
 
 import ProtectedRoute from '../../components/auth/ProtectedRoute';
 import { RootState } from '../../store';
 import { selectSelectedCharacter } from '../../store/slices/characterSlice';
 import LogoutButton from '../../components/LogoutButton';
+import Sidebar from '../../components/layout/Sidebar';
+import Header from '../../components/layout/Header';
 
 const Levels: NextPage = () => {
   const router = useRouter();
@@ -19,6 +22,7 @@ const Levels: NextPage = () => {
   const [isClient, setIsClient] = useState(false);
   const [userInfo, setUserInfo] = useState<any>(null);
   const [selectedCharacterInfo, setSelectedCharacterInfo] = useState<any>(null);
+  const { data: session } = useSession();
   
   useEffect(() => {
     // Указываем, что мы находимся на клиенте
@@ -172,148 +176,12 @@ const Levels: NextPage = () => {
           <meta name="description" content="Выберите уровень для прохождения" />
         </Head>
         
-        <header className="bg-slate-800 shadow-lg">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
-            <div className="flex items-center">
-              <div className="w-10 h-10 bg-indigo-600 rounded-lg flex items-center justify-center mr-3">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-              <h1 className="text-2xl font-bold">
-                <span className="text-indigo-600">GO</span>
-                <span className="text-white">TO</span>
-                <span className="text-indigo-600">GROW</span>
-              </h1>
-            </div>
-            
-            <nav className="hidden md:block">
-              <ul className="flex space-x-4">
-                <li>
-                  <Link href="/dashboard" legacyBehavior>
-                    <a className="nav-link">Прогресс</a>
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/levels" legacyBehavior>
-                    <a className="nav-link-active">Играть</a>
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/profile" legacyBehavior>
-                    <a className="nav-link">Профиль</a>
-                  </Link>
-                </li>
-              </ul>
-            </nav>
-            
-            <div className="flex items-center space-x-4">
-              {isClient && userInfo && (
-                <span className="text-sm text-slate-300 hidden md:inline-block">
-                  Привет, {userInfo?.username || userInfo?.email}
-                </span>
-              )}
-              <LogoutButton />
-            </div>
-          </div>
-        </header>
+        <Header activePage="levels" />
         
         <main className="container-wide py-8">
           <div className="flex flex-col md:flex-row gap-6">
             {/* Боковая панель */}
-            <div className="md:w-1/4">
-              <div className="card mb-6">
-                {/* Информация о персонаже */}
-                {selectedCharacterInfo && (
-                  <div className="mt-4 p-3 bg-slate-800 rounded-lg">
-                    <h4 className="text-sm uppercase text-slate-400 font-medium tracking-wider mb-2">Ваш персонаж</h4>
-                    <div className="flex items-center">
-                      <div className="w-10 h-10 bg-indigo-600/30 rounded-lg flex items-center justify-center mr-3">
-                        {selectedCharacterInfo.icon ? (
-                          <img 
-                            src={selectedCharacterInfo.icon} 
-                            alt={selectedCharacterInfo.name}
-                            className="w-full h-full object-cover rounded-lg"
-                          />
-                        ) : (
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                          </svg>
-                        )}
-                      </div>
-                      <div>
-                        <h3 className="font-bold text-white text-sm">{selectedCharacterInfo.name}</h3>
-                        <div className="flex mt-1">
-                          <span className="text-xs text-indigo-400 px-2 py-0.5 bg-indigo-900/30 rounded">
-                            {selectedCharacterInfo.type === 'product-lead' && 'Стратег'}
-                            {selectedCharacterInfo.type === 'agile-coach' && 'Поддержка'}
-                            {selectedCharacterInfo.type === 'growth-hacker' && 'DPS'}
-                            {selectedCharacterInfo.type === 'ux-visionary' && 'Дизайнер'}
-                            {selectedCharacterInfo.type === 'tech-pm' && 'Гибрид'}
-                            {!selectedCharacterInfo.type && 'Персонаж'}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                    <Link href="/character" legacyBehavior>
-                      <a className="mt-3 text-xs text-indigo-400 hover:text-indigo-300 inline-flex items-center">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m-4 6H4m0 0l4 4m-4-4l4-4" />
-                        </svg>
-                        Сменить персонажа
-                      </a>
-                    </Link>
-                  </div>
-                )}
-                
-                <div className="mt-4 pt-4 border-t border-slate-700">
-                  <h4 className="text-sm uppercase text-slate-500 font-medium tracking-wider mb-3">Навигация</h4>
-                  <ul className="space-y-2">
-                    <li>
-                      <Link href="/dashboard" legacyBehavior>
-                        <a className="flex items-center text-slate-300 rounded-lg p-2 hover:bg-slate-700 transition-colors">
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-                          </svg>
-                          Прогресс
-                        </a>
-                      </Link>
-                    </li>
-                    <li>
-                      <Link href="/levels" legacyBehavior>
-                        <a className="flex items-center text-white bg-slate-700 rounded-lg p-2 hover:bg-slate-600 transition-colors">
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                          </svg>
-                          Играть
-                        </a>
-                      </Link>
-                    </li>
-                    <li>
-                      <Link href="/profile" legacyBehavior>
-                        <a className="flex items-center text-slate-300 rounded-lg p-2 hover:bg-slate-700 transition-colors">
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                          </svg>
-                          Профиль
-                        </a>
-                      </Link>
-                    </li>
-                  </ul>
-                </div>
-              </div>
-              
-              <div className="card p-4 bg-gradient-to-r from-indigo-600 to-purple-600">
-                <h3 className="font-bold text-lg mb-2">Нужна помощь?</h3>
-                <p className="text-slate-200 text-sm mb-3">Посетите наш справочный центр, если у вас возникли вопросы.</p>
-                <Link href="/help" legacyBehavior>
-                  <a className="inline-block bg-white/20 hover:bg-white/30 text-white px-3 py-1 rounded text-sm font-medium transition-colors">
-                    Поддержка
-                  </a>
-                </Link>
-              </div>
-            </div>
+            <Sidebar activePage="levels" />
             
             {/* Основной контент */}
             <div className="md:w-3/4">

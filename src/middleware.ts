@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { withAuth } from 'next-auth/middleware';
 import { getToken } from 'next-auth/jwt';
+import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
 
 // Константы для ограничения запросов
 const MAX_REQUESTS_PER_MINUTE = 60;
@@ -11,137 +11,107 @@ const requestStore: { [key: string]: { count: number; resetTime: number } } = {}
 
 // Основной middleware
 export async function middleware(request: NextRequest) {
-  const response = NextResponse.next();
+  const path = request.nextUrl.pathname;
   
-  // Добавляем заголовки безопасности
-  response.headers.set('X-Content-Type-Options', 'nosniff');
-  response.headers.set('X-Frame-Options', 'SAMEORIGIN');
-  response.headers.set('X-XSS-Protection', '1; mode=block');
-  response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
-  response.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  // Определяем пути, которые можно пройти без аутентификации
+  const isPublicPath = 
+    path === '/' || 
+    path === '/auth/login' || 
+    path === '/auth/register' || 
+    path.startsWith('/api/auth/') || 
+    path.startsWith('/images/') || 
+    path.startsWith('/characters/') || 
+    path.startsWith('/_next/') || 
+    path.startsWith('/favicon');
   
-  // Добавляем Content-Security-Policy для продакшена
-  if (process.env.NODE_ENV === 'production') {
+  // Получаем токен сессии
+  const token = await getToken({
+    req: request,
+    secret: process.env.NEXTAUTH_SECRET
+  });
+  
+  // Логирование для отладки
+  if (process.env.NODE_ENV === 'development') {
+    console.log(`[Middleware] Path: ${path}, Public: ${isPublicPath}, Token: ${token ? 'Yes' : 'No'}`);
+  }
+  
+  // Обрабатываем CORS для API-запросов
+  if (path.startsWith('/api/')) {
+    // Получаем текущий инстанс ответа
+    const response = NextResponse.next();
+    
+    // Устанавливаем CORS заголовки
+    response.headers.set('Access-Control-Allow-Credentials', 'true');
+    response.headers.set('Access-Control-Allow-Origin', '*');
+    response.headers.set('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
     response.headers.set(
-      'Content-Security-Policy',
-      "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https:;"
+      'Access-Control-Allow-Headers',
+      'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization'
     );
+    
+    // Для OPTIONS запросов возвращаем 200
+    if (request.method === 'OPTIONS') {
+      return new NextResponse(null, { status: 200 });
+    }
+    
+    return response;
   }
   
-  // Проверяем авторизацию для защищенных маршрутов
+  // Если пользователь не аутентифицирован и пытается получить доступ к защищенному пути
+  if (!isPublicPath && !token) {
+    // Сохраняем текущий URL в параметре returnUrl
+    const returnUrl = encodeURIComponent(request.nextUrl.pathname);
+    return NextResponse.redirect(new URL(`/auth/login?returnUrl=${returnUrl}`, request.url));
+  }
+  
+  // Для путей аутентификации, когда пользователь уже вошел в систему
+  if ((path === '/auth/login' || path === '/auth/register') && token) {
+    return NextResponse.redirect(new URL('/dashboard', request.url));
+  }
+
+  // Проверяем маршруты, которые требуют выбора персонажа
+  const requireCharacterRoutes = [
+    '/dashboard', 
+    '/game', 
+    '/leaderboard', 
+    '/characters'
+  ];
+  
+  // Если путь требует персонажа, а у пользователя его нет
   if (
-    request.nextUrl.pathname.startsWith('/dashboard') ||
-    request.nextUrl.pathname.startsWith('/profile') ||
-    request.nextUrl.pathname.startsWith('/levels') ||
-    request.nextUrl.pathname.startsWith('/game')
+    requireCharacterRoutes.some(route => path.startsWith(route)) && 
+    token && 
+    token.hasCharacter === false &&
+    !request.cookies.get('character_redirect') // Предотвращаем бесконечный цикл редиректов
   ) {
-    // Проверяем наличие сессии
-    const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET });
+    // Устанавливаем временную куку для предотвращения бесконечных редиректов
+    const response = NextResponse.redirect(new URL('/character/select', request.url));
+    response.cookies.set('character_redirect', '1', { maxAge: 30 }); // Куки на 30 секунд
     
-    // Если сессии нет, перенаправляем на страницу входа
-    if (!token) {
-      const url = new URL('/auth/login', request.url);
-      url.searchParams.set('callbackUrl', encodeURIComponent(request.url));
-      return NextResponse.redirect(url);
-    }
-    
-    // Проверка для маршрутов, требующих персонажа
-    const hasCharacter = token.hasCharacter as boolean;
-    if (
-      (request.nextUrl.pathname.startsWith('/game') || 
-       request.nextUrl.pathname.startsWith('/levels')) && 
-      !hasCharacter
-    ) {
-      const url = new URL('/character', request.url);
-      url.searchParams.set('redirectTo', encodeURIComponent(request.url));
-      return NextResponse.redirect(url);
-    }
+    return response;
   }
   
-  // Настройка CORS для API-запросов
-  if (request.nextUrl.pathname.startsWith('/api')) {
-    // Получаем домен из переменных окружения или используем дефолтные значения
-    const allowedOrigins = process.env.NEXT_PUBLIC_ALLOWED_ORIGINS?.split(',') || 
-                          ['https://shoodyakoff-game-13b1.twc1.net', 'http://localhost:3000'];
-    
-    const origin = request.headers.get('origin') || 'http://localhost:3000';
-    
-    // Для разработки разрешаем все запросы
-    if (process.env.NODE_ENV === 'development') {
-      response.headers.set('Access-Control-Allow-Origin', '*');
-      response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-      response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-      response.headers.set('Access-Control-Allow-Credentials', 'true');
-      
-      if (request.method === 'OPTIONS') {
-        return new NextResponse(null, { status: 204, headers: response.headers });
-      }
-    }
-    // В продакшене проверяем, входит ли origin в список разрешенных
-    else if (allowedOrigins.includes(origin)) {
-      response.headers.set('Access-Control-Allow-Origin', origin);
-      response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-      response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-      response.headers.set('Access-Control-Allow-Credentials', 'true');
-      
-      // Для предзапросов OPTIONS сразу возвращаем ответ
-      if (request.method === 'OPTIONS') {
-        return new NextResponse(null, { status: 204, headers: response.headers });
-      }
-    }
-    
-    // Простая защита от DDoS - ограничение количества запросов
-    const ip = request.ip || 'unknown';
-    const now = Date.now();
-    
-    // Инициализация или сброс счетчика, если время истекло
-    if (!requestStore[ip] || requestStore[ip].resetTime < now) {
-      requestStore[ip] = { count: 1, resetTime: now + REQUEST_WINDOW_MS };
-    } else {
-      requestStore[ip].count += 1;
-      
-      // Если превышен лимит запросов, возвращаем ошибку 429
-      if (requestStore[ip].count > MAX_REQUESTS_PER_MINUTE) {
-        response.headers.set('Retry-After', '60');
-        return new NextResponse(JSON.stringify({ error: 'Too many requests' }), {
-          status: 429,
-          headers: response.headers,
-        });
-      }
-    }
-    
-    // Периодическая очистка хранилища (каждые 5 минут)
-    const CLEANUP_INTERVAL = 5 * 60 * 1000;
-    if (global.middlewareCleanupTimeout === undefined) {
-      global.middlewareCleanupTimeout = setTimeout(() => {
-        for (const ip in requestStore) {
-          if (requestStore[ip].resetTime < now) {
-            delete requestStore[ip];
-          }
-        }
-        global.middlewareCleanupTimeout = undefined;
-      }, CLEANUP_INTERVAL);
-    }
+  // Очищаем куку redirect, если мы находимся на странице выбора персонажа
+  if (path === '/character/select' || path.startsWith('/api/character/')) {
+    const response = NextResponse.next();
+    response.cookies.delete('character_redirect');
+    return response;
   }
   
-  return response;
+  return NextResponse.next();
 }
 
-// Указываем, для каких путей должен срабатывать middleware
+// Конфигурация путей, для которых будет срабатывать middleware
 export const config = {
   matcher: [
-    // Применяем к API-запросам
-    '/api/:path*',
-    // И к защищенным страницам
-    '/dashboard/:path*',
-    '/profile/:path*',
-    '/levels/:path*',
-    '/game/:path*',
-    '/character',
-    // Добавляем страницы аутентификации
-    '/auth/login',
-    '/auth/register',
-    '/auth/logout',
+    /*
+     * Сопоставление всех путей, кроме:
+     * - Файлов из папок _next (статические файлы Next.js)
+     * - Файлов из папки images (изображения)
+     * - Файлов из папки characters (изображения персонажей)
+     * - Файла favicon.ico (иконка сайта)
+     */
+    '/((?!_next/|images/|characters/|favicon.ico).*)',
   ],
 };
 

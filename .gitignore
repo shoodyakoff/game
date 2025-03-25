@@ -81,4 +81,10 @@ logs/
 
 # Временные файлы с секретами
 *.secrets.js
-*.secrets.json 
+*.secrets.json
+
+# Файлы куки
+cookies.txt
+
+# Docker локальные конфигурации
+docker-compose.override.yml 

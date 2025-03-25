@@ -93,58 +93,26 @@ export default function Login() {
       
       if (result?.error) {
         console.error('Ошибка входа через NextAuth:', result.error);
+        setError(result.error === 'CredentialsSignin' ? 'Неверный email или пароль' : result.error);
         
-        // Если NextAuth не сработал, пробуем напрямую через API
-        console.log('Пробуем войти через API напрямую...');
-        
-        try {
-          // API URL из переменных окружения или localhost
-          const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
-          
-          // Запрос к API входа
-          const apiResponse = await fetch(`${API_URL}/auth/login`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              email: formData.email,
-              password: formData.password
-            })
-          });
-          
-          console.log('API ответ статус:', apiResponse.status);
-          
-          if (apiResponse.ok) {
-            const data = await apiResponse.json();
-            console.log('API ответ данные:', data);
-            
-            if (data.success) {
-              // Сохраняем токен в localStorage (для обратной совместимости)
-              localStorage.setItem('token', data.token);
-              localStorage.setItem('user', JSON.stringify(data.user));
-              
-              // Перенаправляем на dashboard
-              router.push('/dashboard');
-              return;
-            }
-          }
-          
-          // Показываем ошибку, если API вход не удался
-          const errorData = await apiResponse.json();
-          setError(errorData.message || 'Неверный email или пароль');
-        } catch (apiError) {
-          console.error('Ошибка при попытке входа через API:', apiError);
-          setError('Произошла ошибка при подключении к серверу');
+        // Для отладки в режиме разработки выводим ошибку целиком
+        if (process.env.NODE_ENV === 'development') {
+          console.error('Детали ошибки NextAuth:', result);
         }
+        
       } else if (result?.url) {
         console.log('Успешный вход через NextAuth, перенаправление на:', result.url);
         // Успешный вход, NextAuth автоматически обновит сессию
         router.push(result.url);
       }
     } catch (err: any) {
-      console.error('Ошибка входа:', err);
+      console.error('Критическая ошибка входа:', err);
       setError('Произошла ошибка при подключении к серверу');
+      
+      // Для отладки в режиме разработки выводим ошибку целиком
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Детали критической ошибки:', err);
+      }
     } finally {
       setFormLoading(false);
     }

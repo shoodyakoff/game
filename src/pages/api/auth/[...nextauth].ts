@@ -24,7 +24,13 @@ export const authOptions: NextAuthOptions = {
         password: { label: 'Password', type: 'password' }
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) return null;
+        if (!credentials?.email || !credentials?.password) {
+          console.log('Отсутствуют учетные данные:', { 
+            hasEmail: !!credentials?.email, 
+            hasPassword: !!credentials?.password 
+          });
+          return null;
+        }
         
         try {
           console.log(`Попытка авторизации для email: ${credentials.email}`);
@@ -33,14 +39,17 @@ export const authOptions: NextAuthOptions = {
           const user = await (User as any).findOne({ email: credentials.email }).select('+password');
           if (!user) {
             console.log(`Пользователь не найден: ${credentials.email}`);
-            return null;
+            throw new Error('Пользователь не найден');
           }
           
           // Проверить пароль
+          console.log(`Сравнение пароля для: ${credentials.email}`);
           const isMatch = await user.matchPassword(credentials.password);
+          console.log(`Результат сравнения пароля: ${isMatch}`);
+          
           if (!isMatch) {
             console.log(`Неверный пароль для: ${credentials.email}`);
-            return null;
+            throw new Error('Неверный пароль');
           }
           
           console.log(`Успешный вход: ${credentials.email}, ID: ${user._id}`);
@@ -56,11 +65,14 @@ export const authOptions: NextAuthOptions = {
             name: user.username,
             image: user.avatar,
             role: user.role,
-            hasCharacter: user.hasCharacter || false
+            hasCharacter: user.hasCharacter || false,
+            fullName: user.fullName || '',
+            bio: user.bio || ''
           };
         } catch (error) {
           console.error('Ошибка аутентификации в NextAuth:', error);
-          return null;
+          // Перебрасываем ошибку для обработки в NextAuth
+          throw error;
         }
       }
     }),
@@ -94,8 +106,31 @@ export const authOptions: NextAuthOptions = {
     },
     // Проверка безопасности для запросов API
     async signIn({ user, account, profile, email, credentials }) {
+      console.log('signIn callback вызван:', { 
+        hasUser: !!user, 
+        hasAccount: !!account, 
+        hasCredentials: !!credentials 
+      });
       return true; // Разрешаем вход всем прошедшим authorize
     },
+    // Исправление для обработки URL обратного вызова
+    async redirect({ url, baseUrl }) {
+      // Исправление неверных URL
+      if (url.includes('%3A%2F%2F')) {
+        url = decodeURIComponent(url);
+      }
+      
+      // Проверка, является ли URL относительным или абсолютным
+      if (url.startsWith('/')) {
+        // Добавляем baseUrl к относительному URL
+        return `${baseUrl}${url}`;
+      } else if (url.startsWith(baseUrl)) {
+        // URL уже абсолютный и принадлежит этому сайту
+        return url;
+      }
+      // По умолчанию возвращаем на страницу профиля
+      return `${baseUrl}/dashboard`;
+    }
   },
   pages: {
     signIn: '/auth/login',
@@ -120,24 +155,18 @@ export const authOptions: NextAuthOptions = {
       },
     },
   },
+  logger: {
+    error(code, metadata) {
+      console.error('[NextAuth] Ошибка:', { code, metadata });
+    },
+    warn(code) {
+      console.warn('[NextAuth] Предупреждение:', code);
+    },
+    debug(code, metadata) {
+      console.log('[NextAuth] Отладка:', { code, metadata });
+    }
+  }
 };
 
 // NextAuth обработчик запросов
-const nextAuthHandler = (req, res) => NextAuth(req, res, authOptions);
-
-// Устанавливаем поддержку CORS для всех маршрутов NextAuth
-export default async function handler(req, res) {
-  // Устанавливаем CORS заголовки для разрешения запросов
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
-  res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, DELETE');
-  res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization');
-  
-  // Обработка OPTIONS запроса (preflight)
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
-  
-  // Передаем все остальные запросы в NextAuth
-  return nextAuthHandler(req, res);
-} 
+export default NextAuth(authOptions); 

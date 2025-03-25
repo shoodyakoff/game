@@ -5,6 +5,7 @@ const nextConfig = {
   output: 'standalone', // Оптимизация для Docker
   images: {
     domains: ['localhost'],
+    unoptimized: true, // Отключаем оптимизацию для простоты работы в Docker
   },
   // Настройки для безопасности
   headers: async () => {
@@ -42,6 +43,17 @@ const nextConfig = {
       {
         source: '/api/:path*',
         destination: '/api/:path*',
+      },
+      {
+        source: '/characters/:path*',
+        destination: '/characters/:path*',
+        has: [
+          {
+            type: 'header',
+            key: 'Accept',
+            value: 'image/(.*)'
+          }
+        ]
       }
     ]
   },

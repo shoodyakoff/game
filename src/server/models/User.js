@@ -34,6 +34,11 @@ const UserSchema = new mongoose.Schema({
     enum: ['user', 'admin'],
     default: 'user'
   },
+  characterType: {
+    type: String,
+    enum: ['product-lead', 'agile-coach', 'growth-hacker', 'ux-visionary', 'tech-pm', null],
+    default: null
+  },
   created_at: {
     type: Date,
     default: Date.now

@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import Image from 'next/image';
 import { useDispatch, useSelector } from 'react-redux';
 import { useRouter } from 'next/router';
 import { useSession } from 'next-auth/react';
@@ -33,7 +32,6 @@ interface Character {
   id: string;
   name: string;
   image: string;
-  icon: string;
   description: string;
   role: string;
   difficulty: string;
@@ -53,7 +51,6 @@ const characters: Character[] = [
     id: 'product-lead',
     name: 'Product Lead',
     image: '/characters/product-lead-full.png',
-    icon: '/characters/product-lead-icon.png',
     description: 'Фокусируется на стратегическом планировании и балансировании потребностей.',
     role: 'Стратег',
     difficulty: 'Нормальная',
@@ -70,7 +67,6 @@ const characters: Character[] = [
     id: 'agile-coach',
     name: 'Agile Coach',
     image: '/characters/agile-coach-full.png',
-    icon: '/characters/agile-coach-icon.png',
     description: 'Фокусируется на процессах и командной работе.',
     role: 'Поддержка',
     difficulty: 'Сложная',
@@ -88,7 +84,6 @@ const characters: Character[] = [
     id: 'growth-hacker',
     name: 'Growth Hacker',
     image: '/characters/growth-hacker-full.png',
-    icon: '/characters/growth-hacker-icon.png',
     description: 'Фокусируется на метриках и максимизации пользовательской базы.',
     role: 'DPS',
     difficulty: 'Экстрим',
@@ -105,7 +100,6 @@ const characters: Character[] = [
     id: 'ux-visionary',
     name: 'UX Visionary',
     image: '/characters/ux-visionary-full.png',
-    icon: '/characters/ux-visionary-icon.png',
     description: 'Фокусируется на пользовательском опыте и креативных решениях.',
     role: 'Дизайнер',
     difficulty: 'Легкая',
@@ -122,7 +116,6 @@ const characters: Character[] = [
     id: 'tech-pm',
     name: 'Tech PM',
     image: '/characters/tech-pm-full.png',
-    icon: '/characters/tech-pm-icon.png',
     description: 'Технически ориентированный PM с глубоким пониманием разработки.',
     role: 'Гибрид',
     difficulty: 'Сложная',
@@ -139,58 +132,142 @@ const characters: Character[] = [
 
 export const CharacterSelect: React.FC = () => {
   const [selectedChar, setSelectedChar] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
   const dispatch = useDispatch();
   const router = useRouter();
   const { redirectTo } = router.query; 
   const currentCharacter = useSelector((state: RootState) => state.character.selectedCharacter);
-  const session = useSession();
+  const { data: session } = useSession();
   
+  // Отладка путей изображений при монтировании компонента
   useEffect(() => {
+    console.log('Доступные персонажи:', characters.map(char => ({ 
+      id: char.id, 
+      path: char.image,
+      absolute: typeof window !== 'undefined' ? new URL(char.image, window.location.origin).href : null
+    })));
+    
     if (currentCharacter) {
       setSelectedChar(currentCharacter.id);
+      console.log('Текущий персонаж из хранилища:', currentCharacter);
     }
   }, [currentCharacter]);
 
   const handleSelectCharacter = (character: Character) => {
     setSelectedChar(character.id);
+    setError(null); // Сбрасываем ошибку при выборе нового персонажа
+    console.log('Выбран персонаж:', character.id);
   };
 
   const handleConfirm = async () => {
-    if (selectedChar) {
-      const character = characters.find(c => c.id === selectedChar);
-      if (character) {
+    if (!selectedChar) return;
+    
+    setIsLoading(true);
+    setError(null);
+    
+    const character = characters.find(c => c.id === selectedChar);
+    if (!character) {
+      setError('Выбранный персонаж не найден');
+      setIsLoading(false);
+      return;
+    }
+    
+    try {
+      console.log('Отправляем API запрос на выбор персонажа:', character.id, character.type);
+      console.log('Сессия пользователя:', session);
+      
+      if (!session || !session.user) {
+        setError('Необходимо авторизоваться для выбора персонажа');
+        setIsLoading(false);
+        return;
+      }
+      
+      // Сохраняем в Redux для обратной совместимости
+      dispatch(selectCharacter(character));
+      
+      // Сохраняем выбор персонажа через API
+      const response = await axios.post('/api/character/select', {
+        characterId: character.id,
+        characterType: character.type
+      }, {
+        headers: { 
+          'Content-Type': 'application/json'
+        },
+        withCredentials: true // Для передачи cookies с сессией
+      });
+      
+      console.log('Успешный API ответ:', response.data);
+      
+      // Обновляем сессию на клиенте, если API сигнализирует о необходимости
+      if (response.data.refreshSession) {
         try {
-          // Сохраняем в Redux для обратной совместимости
-          dispatch(selectCharacter(character));
-          
-          // Сохраняем выбор персонажа через API
-          const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
-          await axios.post(`${API_URL}/character/select`, {
-            characterId: character.id,
-            characterType: character.type
-          }, {
-            headers: { 'Content-Type': 'application/json' },
-            withCredentials: true // Для передачи cookies с сессией
+          console.log('Обновляем сессию на клиенте...');
+          // Вызываем специальный маршрут для обновления сессии
+          await fetch('/api/auth/refresh', { 
+            method: 'GET',
+            cache: 'no-store',
+            credentials: 'include'
           });
           
-          // После успешного сохранения перенаправляем
-          if (redirectTo && typeof redirectTo === 'string') {
-            router.push(decodeURIComponent(redirectTo));
-          } else {
-            // По умолчанию перенаправляем на /levels
-            router.push('/levels');
-          }
-        } catch (error) {
-          console.error('Ошибка при выборе персонажа:', error);
-          // Показываем сообщение об ошибке пользователю
-          alert('Произошла ошибка при сохранении персонажа. Пожалуйста, попробуйте снова.');
+          // Также обновляем стандартный ендпоинт сессии NextAuth
+          await fetch('/api/auth/session', { 
+            method: 'GET',
+            cache: 'no-store',
+            credentials: 'include'
+          });
+        } catch (sessionError) {
+          console.error('Ошибка при обновлении сессии:', sessionError);
+          // Продолжаем процесс даже при ошибке обновления сессии
         }
       }
+      
+      // После успешного сохранения перенаправляем, используя принудительное перенаправление браузера
+      if (response.data && response.data.redirect) {
+        console.log('Перенаправление по данным API:', response.data.redirect);
+        setTimeout(() => {
+          window.location.href = response.data.redirect;
+        }, 500); // Небольшая задержка для обновления сессии
+      } else if (redirectTo && typeof redirectTo === 'string') {
+        console.log('Перенаправление на:', decodeURIComponent(redirectTo));
+        setTimeout(() => {
+          window.location.href = decodeURIComponent(redirectTo);
+        }, 500);
+      } else {
+        // По умолчанию перенаправляем на /dashboard
+        console.log('Перенаправление на /dashboard');
+        setTimeout(() => {
+          window.location.href = '/dashboard';
+        }, 500);
+      }
+    } catch (err: any) {
+      console.error('Ошибка при выборе персонажа:', err);
+      const errorMessage = err.response?.data?.message || 'Произошла ошибка при сохранении персонажа';
+      setError(errorMessage);
+      
+      // Дополнительная отладка ошибки
+      if (err.response) {
+        console.error('Данные ответа:', err.response.data);
+        console.error('Статус ответа:', err.response.status);
+        console.error('Заголовки ответа:', err.response.headers);
+      } else if (err.request) {
+        console.error('Запрос был отправлен, но ответ не получен', err.request);
+      } else {
+        console.error('Ошибка при настройке запроса:', err.message);
+      }
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
     <div className="py-6">
+      {error && (
+        <div className="bg-red-500/10 border border-red-500/50 text-red-300 px-4 py-3 rounded mb-6">
+          <p>{error}</p>
+        </div>
+      )}
+      
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
         {characters.map((character) => (
           <div 
@@ -198,28 +275,18 @@ export const CharacterSelect: React.FC = () => {
             className={`bg-slate-800 rounded-lg p-4 cursor-pointer transition-all hover:bg-slate-700 ${
               selectedChar === character.id ? 'ring-2 ring-blue-500 transform scale-105' : ''
             }`}
-            style={{ 
-              width: 'calc(100% + 50px)', 
-              marginLeft: '-25px',
-              paddingTop: '30px',
-              paddingBottom: '30px'
-            }}
             onClick={() => handleSelectCharacter(character)}
           >
             <div className="flex flex-col items-center">
               <div className="w-24 h-24 flex items-center justify-center mb-4">
-                <Image 
-                  src={character.image} 
+                <img
+                  src={`${character.image}?t=${new Date().getTime()}`}
                   alt={character.name}
-                  width={96}
-                  height={96}
-                  className="object-contain"
-                  style={{ 
-                    display: 'block', 
-                    margin: '0 auto',
-                    height: '120px',
-                    objectFit: 'contain',
-                    objectPosition: 'center'
+                  className="max-h-24 max-w-full object-contain"
+                  onLoad={() => console.log(`Изображение успешно загружено: ${character.image}`)}
+                  onError={(e) => {
+                    console.error(`Ошибка загрузки изображения для ${character.name}: ${character.image}`);
+                    e.currentTarget.src = '/characters/product-lead-icon.png';
                   }}
                 />
               </div>
@@ -264,12 +331,12 @@ export const CharacterSelect: React.FC = () => {
       <div className="flex justify-center">
         <Button 
           onClick={handleConfirm} 
-          disabled={!selectedChar}
+          disabled={!selectedChar || isLoading}
           className="px-8 py-3"
         >
-          Подтвердить выбор
+          {isLoading ? "Сохранение..." : "Подтвердить выбор"}
         </Button>
       </div>
     </div>
   );
-}; 
+};
