@@ -26,7 +26,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Подключаемся к БД и получаем актуальные данные пользователя
     await connectDB();
     
-    const user = await User.findById(session.user.id);
+    const user = await (User as any).findById(session.user.id);
     if (!user) {
       return res.status(404).json({ success: false, message: 'Пользователь не найден' });
     }
