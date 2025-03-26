@@ -42,7 +42,7 @@ export async function middleware(request: NextRequest) {
     
     // Устанавливаем CORS заголовки
     response.headers.set('Access-Control-Allow-Credentials', 'true');
-    response.headers.set('Access-Control-Allow-Origin', '*');
+    response.headers.set('Access-Control-Allow-Origin', 'https://shoodyakoff-game-13b1.twc1.net');
     response.headers.set('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
     response.headers.set(
       'Access-Control-Allow-Headers',
