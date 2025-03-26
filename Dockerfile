@@ -9,11 +9,11 @@ RUN apk update && apk upgrade && \
 ARG NODE_ENV=production
 ARG JWT_SECRET
 ARG MONGODB_URI
-ARG NEXTAUTH_URL
+ARG NEXTAUTH_URL=https://shoodyakoff-game-13b1.twc1.net
 ARG NEXTAUTH_SECRET
-ARG NEXT_PUBLIC_API_URL
-ARG NEXT_PUBLIC_APP_NAME
-ARG NEXT_PUBLIC_APP_VERSION
+ARG NEXT_PUBLIC_API_URL=https://shoodyakoff-game-13b1.twc1.net
+ARG NEXT_PUBLIC_APP_NAME="Game Portal"
+ARG NEXT_PUBLIC_APP_VERSION="1.0.0"
 
 # Установка зависимостей только при первой сборке
 FROM base AS deps
@@ -45,6 +45,13 @@ ENV NEXT_PUBLIC_APP_VERSION=${NEXT_PUBLIC_APP_VERSION}
 RUN if [ -f .env.production ]; then echo "Using existing .env.production"; else touch .env.production; fi
 RUN if [ -f .env.local ]; then echo "Removing .env.local"; rm .env.local; fi
 RUN if [ -f .env.sync ]; then echo "Removing .env.sync"; rm .env.sync; fi
+
+# Создаем временный .env.production для сборки
+RUN echo "NEXTAUTH_URL=${NEXTAUTH_URL}" > .env.production && \
+    echo "NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}" >> .env.production && \
+    echo "NEXT_PUBLIC_APP_NAME=${NEXT_PUBLIC_APP_NAME}" >> .env.production && \
+    echo "NEXT_PUBLIC_APP_VERSION=${NEXT_PUBLIC_APP_VERSION}" >> .env.production && \
+    echo "NODE_ENV=production" >> .env.production
 
 # Создание оптимизированной сборки
 RUN npm run build && \
