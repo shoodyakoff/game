@@ -5,6 +5,16 @@ FROM node:18-alpine AS base
 RUN apk update && apk upgrade && \
     apk add --no-cache dumb-init
 
+# Определяем аргументы сборки
+ARG NODE_ENV=production
+ARG JWT_SECRET
+ARG MONGODB_URI
+ARG NEXTAUTH_URL
+ARG NEXTAUTH_SECRET
+ARG NEXT_PUBLIC_API_URL
+ARG NEXT_PUBLIC_APP_NAME
+ARG NEXT_PUBLIC_APP_VERSION
+
 # Установка зависимостей только при первой сборке
 FROM base AS deps
 WORKDIR /app
@@ -20,6 +30,16 @@ FROM base AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+
+# Передаем аргументы в виде переменных окружения для сборки
+ENV NODE_ENV=${NODE_ENV}
+ENV JWT_SECRET=${JWT_SECRET}
+ENV MONGODB_URI=${MONGODB_URI}
+ENV NEXTAUTH_URL=${NEXTAUTH_URL}
+ENV NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+ENV NEXT_PUBLIC_APP_NAME=${NEXT_PUBLIC_APP_NAME}
+ENV NEXT_PUBLIC_APP_VERSION=${NEXT_PUBLIC_APP_VERSION}
 
 # Проверяем и очищаем env файлы от чувствительных данных
 RUN if [ -f .env.production ]; then echo "Using existing .env.production"; else touch .env.production; fi
@@ -41,8 +61,15 @@ WORKDIR /app
 RUN addgroup -g 1001 -S nodejs && \
     adduser -S nextjs -u 1001 -G nodejs
 
-# Установка для продакшен
-ENV NODE_ENV=production
+# Передаем аргументы в виде переменных окружения для запуска
+ENV NODE_ENV=${NODE_ENV}
+ENV JWT_SECRET=${JWT_SECRET}
+ENV MONGODB_URI=${MONGODB_URI}
+ENV NEXTAUTH_URL=${NEXTAUTH_URL}
+ENV NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+ENV NEXT_PUBLIC_APP_NAME=${NEXT_PUBLIC_APP_NAME}
+ENV NEXT_PUBLIC_APP_VERSION=${NEXT_PUBLIC_APP_VERSION}
 
 # Установка прав доступа на директории
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
