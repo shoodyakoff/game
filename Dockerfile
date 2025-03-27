@@ -1,96 +1,48 @@
-# Этап 1: Установка зависимостей и сборка приложения
+# Базовый образ
 FROM node:18-alpine AS base
 
-# Добавляем обновления безопасности
-RUN apk update && apk upgrade && \
-    apk add --no-cache dumb-init
-
-# Определяем аргументы сборки
-ARG NODE_ENV=production
-ARG JWT_SECRET
-ARG MONGODB_URI
-ARG NEXTAUTH_URL=https://shoodyakoff-game-13b1.twc1.net
-ARG NEXTAUTH_SECRET
-ARG NEXT_PUBLIC_API_URL=https://shoodyakoff-game-13b1.twc1.net
-ARG NEXT_PUBLIC_APP_NAME="Game Portal"
-ARG NEXT_PUBLIC_APP_VERSION="1.0.0"
-
-# Установка зависимостей только при первой сборке
+# Установка зависимостей
 FROM base AS deps
 WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm install --legacy-peer-deps
 
-# Копирование package.json и установка зависимостей
-COPY package.json package-lock.json* ./
-RUN npm install --legacy-peer-deps && \
-    npm prune --production && \
-    npm cache clean --force
-
-# Сборка приложения
+# Сборка
 FROM base AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# Передаем аргументы в виде переменных окружения для сборки
-ENV NODE_ENV=${NODE_ENV}
-ENV JWT_SECRET=${JWT_SECRET}
-ENV MONGODB_URI=${MONGODB_URI}
+# Аргументы для сборки
+ARG NEXTAUTH_URL
+ARG NEXT_PUBLIC_API_URL
+ARG NODE_ENV=production
+
+# Установка переменных для сборки из аргументов
 ENV NEXTAUTH_URL=${NEXTAUTH_URL}
-ENV NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
 ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
-ENV NEXT_PUBLIC_APP_NAME=${NEXT_PUBLIC_APP_NAME}
-ENV NEXT_PUBLIC_APP_VERSION=${NEXT_PUBLIC_APP_VERSION}
-
-# Проверяем и очищаем env файлы от чувствительных данных
-RUN if [ -f .env.production ]; then echo "Using existing .env.production"; else touch .env.production; fi
-RUN if [ -f .env.local ]; then echo "Removing .env.local"; rm .env.local; fi
-RUN if [ -f .env.sync ]; then echo "Removing .env.sync"; rm .env.sync; fi
-
-# Создаем временный .env.production для сборки
-RUN echo "NEXTAUTH_URL=${NEXTAUTH_URL}" > .env.production && \
-    echo "NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}" >> .env.production && \
-    echo "NEXT_PUBLIC_APP_NAME=${NEXT_PUBLIC_APP_NAME}" >> .env.production && \
-    echo "NEXT_PUBLIC_APP_VERSION=${NEXT_PUBLIC_APP_VERSION}" >> .env.production && \
-    echo "NODE_ENV=production" >> .env.production
+ENV NODE_ENV=${NODE_ENV}
 
 # Создание оптимизированной сборки
-RUN npm run build && \
-    npm prune --production
+RUN npm run build
 
-# Сканирование уязвимостей (опционально, закомментировано для ускорения сборки)
-# RUN npm audit --production
-
-# Этап 2: Запуск приложения
+# Продакшен образ
 FROM base AS runner
 WORKDIR /app
 
-# Создаем непривилегированного пользователя
-RUN addgroup -g 1001 -S nodejs && \
-    adduser -S nextjs -u 1001 -G nodejs
+# Создание пользователя
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 nextjs
 
-# Передаем аргументы в виде переменных окружения для запуска
-ENV NODE_ENV=${NODE_ENV}
-ENV JWT_SECRET=${JWT_SECRET}
-ENV MONGODB_URI=${MONGODB_URI}
-ENV NEXTAUTH_URL=${NEXTAUTH_URL}
-ENV NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
-ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
-ENV NEXT_PUBLIC_APP_NAME=${NEXT_PUBLIC_APP_NAME}
-ENV NEXT_PUBLIC_APP_VERSION=${NEXT_PUBLIC_APP_VERSION}
-
-# Установка прав доступа на директории
+# Копирование собранного приложения
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
-# Настройка безопасности: не запускать как root
 USER nextjs
-
-# Expose порт для доступа к приложению
 EXPOSE 3000
 
-# Используем dumb-init для правильной обработки сигналов
-ENTRYPOINT ["/usr/bin/dumb-init", "--"]
+# Порт для Next.js
+ENV PORT=3000
 
-# Команда запуска приложения
 CMD ["node", "server.js"] 
