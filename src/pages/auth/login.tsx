@@ -11,9 +11,15 @@ export default function Login() {
   const isLoading = status === 'loading';
   const isAuthenticated = status === 'authenticated';
   
+  // Объединенное состояние загрузки
+  const [formLoading, setFormLoading] = useState(false);
+  const isSubmitting = formLoading || isLoading;
+
   // Состояние для ошибок аутентификации
   const [error, setError] = useState<string | null>(null);
-  const [formLoading, setFormLoading] = useState(false);
+  
+  // Состояние для отслеживания попытки входа
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
 
   // Состояние формы
   const [formData, setFormData] = useState({
@@ -38,6 +44,9 @@ export default function Login() {
         case 'CredentialsSignin':
           setError('Неверный email или пароль');
           break;
+        case 'SessionRequired':
+          setError('Необходима авторизация');
+          break;
         default:
           setError('Произошла ошибка при входе');
           break;
@@ -47,23 +56,27 @@ export default function Login() {
 
   // Если пользователь уже авторизован, перенаправляем его
   useEffect(() => {
-    if (isAuthenticated) {
+    if (isAuthenticated && !isLoggingIn) {
       const redirectUrl = callbackUrl 
         ? decodeURIComponent(callbackUrl as string) 
         : '/dashboard';
       
-      // Разрешаем навигацию на страницу регистрации
-      router.push(redirectUrl);
+      // Защита от циклических редиректов
+      if (redirectUrl.includes('/auth/')) {
+        router.replace('/dashboard');
+      } else {
+        router.replace(redirectUrl);
+      }
     }
-  }, [isAuthenticated, callbackUrl, router]);
+  }, [isAuthenticated, callbackUrl, router, isLoggingIn]);
 
   // Обработчик изменения полей формы
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
-    setFormData({
-      ...formData,
+    setFormData(prev => ({
+      ...prev,
       [name]: type === 'checkbox' ? checked : value,
-    });
+    }));
     
     // Сбрасываем ошибку при изменении полей
     setError(null);
@@ -74,51 +87,51 @@ export default function Login() {
     e.preventDefault();
     setFormLoading(true);
     setError(null);
-    
-    console.log('Попытка входа для:', formData.email);
+    setIsLoggingIn(true);
     
     try {
+      // Проверка соединения
+      if (!navigator.onLine) {
+        throw new Error('Отсутствует подключение к интернету');
+      }
+
       // Используем NextAuth для входа
       const result = await signIn('credentials', {
         redirect: false,
         email: formData.email,
         password: formData.password,
-        callbackUrl: callbackUrl as string || '/dashboard'
       });
       
-      console.log('Результат входа через NextAuth:', result);
-      
       if (result?.error) {
-        console.error('Ошибка входа через NextAuth:', result.error);
-        setError(result.error === 'CredentialsSignin' ? 'Неверный email или пароль' : result.error);
-        
-        // Для отладки в режиме разработки выводим ошибку целиком
-        if (process.env.NODE_ENV === 'development') {
-          console.error('Детали ошибки NextAuth:', result);
+        switch (result.error) {
+          case 'CredentialsSignin':
+            setError('Неверный email или пароль');
+            break;
+          default:
+            setError(result.error);
         }
-        
       } else if (result?.url) {
-        console.log('Успешный вход через NextAuth, перенаправление на:', result.url);
-        // Успешный вход, NextAuth автоматически обновит сессию
-        router.push(result.url);
+        // Успешный вход, делаем редирект
+        router.replace(result.url);
       }
     } catch (err: any) {
       console.error('Критическая ошибка входа:', err);
-      setError('Произошла ошибка при подключении к серверу');
       
-      // Для отладки в режиме разработки выводим ошибку целиком
-      if (process.env.NODE_ENV === 'development') {
-        console.error('Детали критической ошибки:', err);
+      if (!navigator.onLine) {
+        setError('Отсутствует подключение к интернету');
+      } else {
+        setError('Произошла ошибка при подключении к серверу');
       }
     } finally {
       setFormLoading(false);
+      setIsLoggingIn(false);
     }
   };
 
   return (
     <>
       <Head>
-        <title>Вход | GOTOGROW</title>
+        <title>Вход | GAMEPORTAL</title>
         <meta name="description" content="Войдите в свой аккаунт" />
       </Head>
 
@@ -223,16 +236,16 @@ export default function Login() {
               <div>
                 <button
                   type="submit"
-                  disabled={formLoading || isLoading}
+                  disabled={isSubmitting}
                   className="btn-primary w-full"
                 >
-                  {(formLoading || isLoading) ? (
+                  {isSubmitting ? (
                     <span className="flex items-center justify-center">
                       <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                       </svg>
-                      Вход...
+                      {isSubmitting ? 'Вход...' : 'Войти'}
                     </span>
                   ) : (
                     'Войти'
@@ -247,8 +260,8 @@ export default function Login() {
                 href="/auth/register" 
                 className="text-blue-400 hover:text-blue-300 font-medium"
                 onClick={(e) => {
-                  e.preventDefault();
-                  router.push('/auth/register');
+                  e.stopPropagation();
+                  router.replace('/auth/register');
                 }}
               >
                 Зарегистрироваться

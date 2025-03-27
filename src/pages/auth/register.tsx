@@ -31,72 +31,105 @@ export default function Register() {
   // Состояние для ошибок API
   const [error, setError] = useState('');
   
-  // Состояние загрузки
+  // Объединенное состояние загрузки
   const [loading, setLoading] = useState(false);
+  const isSubmitting = loading || isLoading;
   
-  // Состояние для отслеживания клиентского рендеринга
-  const [isClient, setIsClient] = useState(false);
+  // Состояние для отслеживания попытки регистрации
+  const [isRegistering, setIsRegistering] = useState(false);
 
   // Получаем URL для перенаправления после регистрации
   const { returnUrl, callbackUrl } = router.query;
   
-  // Устанавливаем флаг клиентского рендеринга
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
-
   // Если пользователь уже авторизован, перенаправляем его
   useEffect(() => {
-    if (isAuthenticated) {
+    if (isAuthenticated && !isRegistering) {
       const redirectUrl = returnUrl || callbackUrl || '/dashboard';
       let url = typeof redirectUrl === 'string' ? redirectUrl : '/dashboard';
       
-      // Проверяем, не содержит ли returnUrl путь аутентификации
+      // Защита от циклических редиректов
       if (url.includes('/auth/') || url.includes('returnUrl=')) {
         url = '/dashboard';
       }
       
-      router.push(url);
+      router.replace(url);
     }
-  }, [isAuthenticated, returnUrl, callbackUrl, router]);
-
-  // Очищаем ошибки при изменении полей формы
-  useEffect(() => {
-    if (error) {
-      setError('');
-    }
-  }, [formData]);
-
-  // Проверка пароля при каждом изменении
-  useEffect(() => {
-    // Проверка совпадения паролей
-    if (formData.confirmPassword && formData.password !== formData.confirmPassword) {
-      setValidationErrors(prev => ({
-        ...prev,
-        confirmPassword: 'Пароли не совпадают'
-      }));
-    } else {
-      setValidationErrors(prev => ({
-        ...prev,
-        confirmPassword: ''
-      }));
-    }
-  }, [formData.password, formData.confirmPassword]);
+  }, [isAuthenticated, returnUrl, callbackUrl, router, isRegistering]);
 
   // Обработчик изменения полей формы
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData({
-      ...formData,
+    setFormData(prev => ({
+      ...prev,
       [name]: value,
-    });
+    }));
     
-    // Сбрасываем ошибки валидации при вводе
-    if (validationErrors[name as keyof typeof validationErrors]) {
-      setValidationErrors({
-        ...validationErrors,
-        [name]: '',
+    // Сбрасываем ошибки
+    setValidationErrors(prev => ({
+      ...prev,
+      [name]: '',
+    }));
+    setError('');
+  };
+
+  // Обработчик отправки формы
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!validateForm()) {
+      return;
+    }
+    
+    setLoading(true);
+    setError('');
+    setIsRegistering(true);
+    
+    try {
+      // Проверка соединения
+      if (!navigator.onLine) {
+        throw new Error('Отсутствует подключение к интернету');
+      }
+
+      // Регистрация пользователя через API
+      const response = await axios.post('/api/auth/register', {
+        username: formData.username,
+        email: formData.email,
+        password: formData.password
+      }, {
+        timeout: 10000, // 10 секунд таймаут
       });
+      
+      if (response.data.success) {
+        // После успешной регистрации выполняем вход
+        const result = await signIn('credentials', {
+          redirect: false, // Сначала проверяем результат
+          email: formData.email,
+          password: formData.password,
+        });
+        
+        if (result?.error) {
+          setError(result.error);
+        } else {
+          // Успешный вход, делаем редирект
+          router.replace('/dashboard');
+        }
+      }
+    } catch (err: any) {
+      console.error('Ошибка регистрации:', err);
+      
+      // Специфическая обработка ошибок
+      if (err.code === 'ECONNABORTED') {
+        setError('Превышено время ожидания ответа от сервера');
+      } else if (!navigator.onLine) {
+        setError('Отсутствует подключение к интернету');
+      } else if (axios.isAxiosError(err) && !err.response) {
+        setError('Не удалось подключиться к серверу');
+      } else {
+        setError(err.response?.data?.message || 'Произошла ошибка при регистрации. Попробуйте позже.');
+      }
+    } finally {
+      setLoading(false);
+      setIsRegistering(false);
     }
   };
 
@@ -148,52 +181,10 @@ export default function Register() {
     return isValid;
   };
 
-  // Обработчик отправки формы
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    // Проверяем форму перед отправкой
-    if (!validateForm()) {
-      return;
-    }
-    
-    setLoading(true);
-    setError('');
-    
-    try {
-      // Регистрация пользователя через API
-      const response = await axios.post('/api/auth/register', {
-        username: formData.username,
-        email: formData.email,
-        password: formData.password
-      });
-      
-      if (response.data.success) {
-        // После успешной регистрации выполняем вход
-        const result = await signIn('credentials', {
-          redirect: true,
-          email: formData.email,
-          password: formData.password,
-          callbackUrl: '/dashboard'
-        });
-        
-        // Этот код выполнится только если redirect: false
-        if (result?.error) {
-          setError(result.error);
-        }
-      }
-    } catch (err: any) {
-      console.error('Ошибка регистрации:', err);
-      setError(err.response?.data?.message || 'Произошла ошибка при регистрации. Попробуйте позже.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   return (
     <>
       <Head>
-        <title>Регистрация | GOTOGROW</title>
+        <title>Регистрация | GAMEPORTAL</title>
         <meta name="description" content="Зарегистрируйтесь, чтобы начать играть" />
       </Head>
 
@@ -332,14 +323,13 @@ export default function Register() {
               <div className="pt-2">
                 <button
                   type="submit"
-                  disabled={loading}
+                  disabled={isSubmitting}
                   className="btn-primary w-full flex justify-center items-center"
-                  style={{ pointerEvents: 'auto' }}
                 >
-                  {loading ? (
+                  {isSubmitting ? (
                     <span className="spinner mr-2"></span>
                   ) : null}
-                  Зарегистрироваться
+                  {isSubmitting ? 'Регистрация...' : 'Зарегистрироваться'}
                 </button>
               </div>
             </form>
@@ -350,7 +340,10 @@ export default function Register() {
                 <Link 
                   href="/auth/login" 
                   className="text-indigo-400 hover:text-indigo-300 transition"
-                  style={{ pointerEvents: 'auto' }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    router.replace('/auth/login');
+                  }}
                 >
                   Войти
                 </Link>
