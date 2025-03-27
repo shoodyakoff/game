@@ -63,9 +63,9 @@ export default function Login() {
       
       // Защита от циклических редиректов
       if (redirectUrl.includes('/auth/')) {
-        router.replace('/dashboard');
+        router.replace('/dashboard', undefined, { shallow: true });
       } else {
-        router.replace(redirectUrl);
+        router.replace(redirectUrl, undefined, { shallow: true });
       }
     }
   }, [isAuthenticated, callbackUrl, router, isLoggingIn]);
@@ -97,11 +97,14 @@ export default function Login() {
 
       // Используем NextAuth для входа
       const result = await signIn('credentials', {
-        redirect: false,
+        redirect: true,
         email: formData.email,
         password: formData.password,
+        remember: formData.remember,
+        callbackUrl: '/dashboard'
       });
       
+      // Этот код выполнится только если redirect: false
       if (result?.error) {
         switch (result.error) {
           case 'CredentialsSignin':
@@ -110,9 +113,6 @@ export default function Login() {
           default:
             setError(result.error);
         }
-      } else if (result?.url) {
-        // Успешный вход, делаем редирект
-        router.replace(result.url);
       }
     } catch (err: any) {
       console.error('Критическая ошибка входа:', err);
@@ -237,19 +237,15 @@ export default function Login() {
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="btn-primary w-full"
+                  className="btn-primary w-full flex justify-center items-center"
                 >
-                  {isSubmitting ? (
-                    <span className="flex items-center justify-center">
-                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
-                      {isSubmitting ? 'Вход...' : 'Войти'}
-                    </span>
-                  ) : (
-                    'Войти'
+                  {isSubmitting && (
+                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
                   )}
+                  {isSubmitting ? 'Вход...' : 'Войти'}
                 </button>
               </div>
             </form>
@@ -260,8 +256,9 @@ export default function Login() {
                 href="/auth/register" 
                 className="text-blue-400 hover:text-blue-300 font-medium"
                 onClick={(e) => {
-                  e.stopPropagation();
-                  router.replace('/auth/register');
+                  e.preventDefault();
+                  setIsLoggingIn(false); // Сбрасываем состояние входа
+                  router.push('/auth/register', undefined, { shallow: true });
                 }}
               >
                 Зарегистрироваться

@@ -48,11 +48,11 @@ export default function Register() {
       let url = typeof redirectUrl === 'string' ? redirectUrl : '/dashboard';
       
       // Защита от циклических редиректов
-      if (url.includes('/auth/') || url.includes('returnUrl=')) {
+      if (url.includes('/auth/')) {
         url = '/dashboard';
       }
       
-      router.replace(url);
+      router.replace(url, undefined, { shallow: true });
     }
   }, [isAuthenticated, returnUrl, callbackUrl, router, isRegistering]);
 
@@ -102,16 +102,15 @@ export default function Register() {
       if (response.data.success) {
         // После успешной регистрации выполняем вход
         const result = await signIn('credentials', {
-          redirect: false, // Сначала проверяем результат
+          redirect: true,
           email: formData.email,
           password: formData.password,
+          callbackUrl: '/dashboard'
         });
         
+        // Этот код выполнится только если redirect: false
         if (result?.error) {
           setError(result.error);
-        } else {
-          // Успешный вход, делаем редирект
-          router.replace('/dashboard');
         }
       }
     } catch (err: any) {
@@ -193,14 +192,12 @@ export default function Register() {
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         className="min-h-screen bg-gradient-to-br from-gray-900 to-slate-900 flex flex-col justify-center items-center px-4 sm:px-6 lg:px-8"
-        style={{ pointerEvents: 'auto' }}
       >
         <motion.div
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.2 }}
           className="w-full max-w-md"
-          style={{ pointerEvents: 'auto' }}
         >
           <div className="text-center mb-8">
             <motion.div
@@ -236,7 +233,7 @@ export default function Register() {
               </motion.div>
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-5" style={{ pointerEvents: 'auto' }}>
+            <form onSubmit={handleSubmit} className="space-y-5">
               <div>
                 <label htmlFor="username" className="block text-sm font-medium text-gray-300 mb-1">
                   Имя пользователя
@@ -250,7 +247,6 @@ export default function Register() {
                   onChange={handleChange}
                   className="input-primary w-full"
                   placeholder="username"
-                  style={{ pointerEvents: 'auto' }}
                 />
                 {validationErrors.username && (
                   <p className="form-error">{validationErrors.username}</p>
@@ -270,7 +266,6 @@ export default function Register() {
                   onChange={handleChange}
                   className="input-primary w-full"
                   placeholder="your@email.com"
-                  style={{ pointerEvents: 'auto' }}
                 />
                 {validationErrors.email && (
                   <p className="form-error">{validationErrors.email}</p>
@@ -290,7 +285,6 @@ export default function Register() {
                   onChange={handleChange}
                   className="input-primary w-full"
                   placeholder="••••••••"
-                  style={{ pointerEvents: 'auto' }}
                 />
                 <p className="text-xs text-gray-400 mt-1">
                   Минимум 6 символов, включая цифры и спецсимволы
@@ -313,7 +307,6 @@ export default function Register() {
                   onChange={handleChange}
                   className="input-primary w-full"
                   placeholder="••••••••"
-                  style={{ pointerEvents: 'auto' }}
                 />
                 {validationErrors.confirmPassword && (
                   <p className="form-error">{validationErrors.confirmPassword}</p>
@@ -326,9 +319,9 @@ export default function Register() {
                   disabled={isSubmitting}
                   className="btn-primary w-full flex justify-center items-center"
                 >
-                  {isSubmitting ? (
+                  {isSubmitting && (
                     <span className="spinner mr-2"></span>
-                  ) : null}
+                  )}
                   {isSubmitting ? 'Регистрация...' : 'Зарегистрироваться'}
                 </button>
               </div>
@@ -341,8 +334,9 @@ export default function Register() {
                   href="/auth/login" 
                   className="text-indigo-400 hover:text-indigo-300 transition"
                   onClick={(e) => {
-                    e.stopPropagation();
-                    router.replace('/auth/login');
+                    e.preventDefault();
+                    setIsRegistering(false); // Сбрасываем состояние регистрации
+                    router.push('/auth/login', undefined, { shallow: true });
                   }}
                 >
                   Войти
