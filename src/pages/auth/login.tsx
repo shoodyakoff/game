@@ -52,11 +52,8 @@ export default function Login() {
         ? decodeURIComponent(callbackUrl as string) 
         : '/dashboard';
       
-      // Проверяем, не содержит ли returnUrl путь аутентификации
-      const isValidRedirect = typeof redirectUrl === 'string' && 
-                              !redirectUrl.includes('/auth/');
-      
-      router.push(isValidRedirect ? redirectUrl : '/dashboard');
+      // Разрешаем навигацию на страницу регистрации
+      router.push(redirectUrl);
     }
   }, [isAuthenticated, callbackUrl, router]);
 
@@ -246,7 +243,14 @@ export default function Login() {
 
             <div className="mt-6 text-center text-sm">
               <span className="text-gray-400">Ещё нет аккаунта? </span>
-              <Link href="/auth/register" className="text-blue-400 hover:text-blue-300 font-medium">
+              <Link 
+                href="/auth/register" 
+                className="text-blue-400 hover:text-blue-300 font-medium"
+                onClick={(e) => {
+                  e.preventDefault();
+                  router.push('/auth/register');
+                }}
+              >
                 Зарегистрироваться
               </Link>
             </div>

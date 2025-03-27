@@ -171,16 +171,15 @@ export default function Register() {
       if (response.data.success) {
         // После успешной регистрации выполняем вход
         const result = await signIn('credentials', {
-          redirect: false,
+          redirect: true,
           email: formData.email,
           password: formData.password,
-          callbackUrl: (callbackUrl as string) || '/dashboard'
+          callbackUrl: '/dashboard'
         });
         
+        // Этот код выполнится только если redirect: false
         if (result?.error) {
           setError(result.error);
-        } else if (result?.url) {
-          router.push(result.url);
         }
       }
     } catch (err: any) {
