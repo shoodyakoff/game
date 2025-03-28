@@ -20,14 +20,15 @@ FROM base AS builder
 WORKDIR /app
 
 # Сначала устанавливаем переменные окружения
-ARG NEXTAUTH_URL
-ARG NEXT_PUBLIC_API_URL
+ARG NEXTAUTH_URL=http://localhost:3000
+ARG NEXT_PUBLIC_API_URL=http://localhost:3000
 ARG NODE_ENV=production
 
 ENV NEXTAUTH_URL=${NEXTAUTH_URL}
 ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
 ENV NODE_ENV=${NODE_ENV}
 ENV NEXT_TELEMETRY_DISABLED=1
+ENV NEXTAUTH_SECRET=your-super-secret-nextauth-key
 
 # Копируем зависимости
 COPY --from=deps /app/node_modules ./node_modules
@@ -39,7 +40,7 @@ RUN cat next.config.js
 # Создание оптимизированной сборки
 RUN npm run build
 
-# Проверка создания директории standalone
+# Проверка содержимого директории .next после сборки
 RUN ls -la ./.next/ || true
 
 # Удаление ненужных файлов и оптимизация размера образа
@@ -70,19 +71,17 @@ RUN mkdir -p .next && \
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
+ENV NEXTAUTH_URL=http://localhost:3000
+ENV NEXTAUTH_SECRET=your-super-secret-nextauth-key
 
 # Копируем необходимые файлы 
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 
-# Проверяем наличие директории standalone перед копированием
-# Если директории standalone нет, копируем всю директорию .next
-RUN mkdir -p ./.next/static
-
-# Копирование всей директории .next вместо только standalone
-# Это решение для случаев, когда standalone режим не применяется
+# Копирование всей директории .next вместо использования только standalone
 COPY --from=builder --chown=nextjs:nodejs /app/.next ./.next
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules ./node_modules
 COPY --from=builder --chown=nextjs:nodejs /app/package.json ./package.json
+COPY --from=builder --chown=nextjs:nodejs /app/next.config.js ./next.config.js
 
 # Переключаемся на непривилегированного пользователя
 USER nextjs

@@ -2,7 +2,8 @@
 const nextConfig = {
   reactStrictMode: true,
   swcMinify: true,
-  output: 'standalone', // Оптимизация для Docker
+  // Убираем output: 'standalone' и настраиваем для обычного режима
+  distDir: '.next',
   images: {
     domains: ['localhost'],
     unoptimized: true, // Отключаем оптимизацию для простоты работы в Docker

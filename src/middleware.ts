@@ -21,8 +21,8 @@ export async function middleware(request: NextRequest) {
   // Проверяем, является ли путь API маршрутом
   const isApiRoute = path.startsWith('/api/');
   
-  // Путь для выбора персонажа
-  const characterSelectionPath = '/character/select';
+  // Пути для выбора персонажа (поддерживаем и путь index, и путь select)
+  const characterSelectionPaths = ['/character', '/character/index', '/character/select'];
   
   // Защищенные пути, требующие персонажа
   const characterProtectedPaths = [
@@ -74,12 +74,18 @@ export async function middleware(request: NextRequest) {
   }
   
   // 3. Если у пользователя уже есть персонаж и он пытается выбрать персонажа
-  if (token && path === characterSelectionPath && token.hasCharacter === true) {
+  if (token && characterSelectionPaths.includes(path) && token.hasCharacter === true) {
     console.log('[Middleware] Пользователь уже имеет персонажа, перенаправление на дашборд');
     return NextResponse.redirect(new URL('/dashboard', request.url));
   }
   
-  // 4. Если у пользователя нет персонажа и он пытается посетить защищенные пути
+  // 4. Перенаправляем с /character и /character/index на /character/select для унификации
+  if (token && (path === '/character' || path === '/character/index')) {
+    console.log('[Middleware] Перенаправление с /character на /character/select');
+    return NextResponse.redirect(new URL('/character/select', request.url));
+  }
+  
+  // 5. Если у пользователя нет персонажа и он пытается посетить защищенные пути
   if (token && characterProtectedPaths.some(p => path.startsWith(p)) && token.hasCharacter !== true) {
     // Если персонаж только что выбран (есть cookie), разрешаем доступ к дашборду
     if (hasJustSelectedCharacter) {
@@ -106,7 +112,7 @@ export async function middleware(request: NextRequest) {
     }
     
     // Устанавливаем кастомные заголовки для отладки
-    const response = NextResponse.redirect(new URL(characterSelectionPath, request.url));
+    const response = NextResponse.redirect(new URL('/character/select', request.url));
     response.headers.set('X-Debug-Redirect', 'No character found');
     console.log('[Middleware] Перенаправление на страницу выбора персонажа из:', path);
     return response;

@@ -19,36 +19,27 @@ export interface SessionUpdateOptions {
 }
 
 /**
- * Безопасное перенаправление с использованием Next.js Router
+ * Безопасное перенаправление на указанный URL
+ * Предотвращает ошибки "Abort fetching component" при навигации
  * @param url URL для перенаправления
  */
 export function safeRedirect(url: string) {
-  // Проверяем, что URL допустимый
+  if (typeof window === 'undefined') return;
+  
+  // Логирование для отладки
+  console.log(`[safeRedirect] Перенаправление на: ${url}`);
+  
   try {
-    // Проверяем наличие Router для SSR-совместимости
-    if (typeof window !== 'undefined') {
-      console.log(`[safeRedirect] Перенаправление на ${url} используя Next.js Router`);
-      
-      // Очищаем URL от недопустимых символов
-      const safeUrl = url.replace(/[^\w\s\/\-?=&.]/g, '');
-      
-      // Используем Next.js Router вместо window.location для клиентской навигации
-      Router.push(safeUrl)
-        .catch((err) => {
-          console.error('[safeRedirect] Ошибка при перенаправлении через Router:', err);
-          // Запасной вариант - используем window.location
-          console.log('[safeRedirect] Использую запасной вариант: window.location');
-          window.location.href = safeUrl;
-        });
-    } else {
-      // Для SSR случаев (хотя это маловероятно)
-      console.log('[safeRedirect] SSR-режим, перенаправление будет обработано сервером');
-    }
+    // Используем window.location.href вместо router.push для более надежной навигации
+    // Это предотвращает ошибки "Abort fetching component for route"
+    window.location.href = url;
   } catch (error) {
-    console.error('[safeRedirect] Ошибка при перенаправлении:', error);
-    // Запасной вариант - просто перенаправляем на дашборд
-    if (typeof window !== 'undefined') {
-      window.location.href = '/dashboard';
+    console.error('Ошибка при перенаправлении:', error);
+    // Резервный вариант в случае ошибки
+    try {
+      window.location.replace(url);
+    } catch (e) {
+      console.error('Ошибка даже при использовании location.replace:', e);
     }
   }
 }
