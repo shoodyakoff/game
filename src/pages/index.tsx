@@ -5,15 +5,21 @@ import { motion } from 'framer-motion';
 import { useSelector } from 'react-redux';
 import { RootState } from '../store';
 import { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
+import UserProfile from '../components/UserProfile';
 
 const Home: NextPage = () => {
-  const { isAuthenticated, user } = useSelector((state: RootState) => state.auth);
+  const { isAuthenticated } = useSelector((state: RootState) => state.auth);
+  const { data: session } = useSession();
   const [isClient, setIsClient] = useState(false);
   
   useEffect(() => {
     // Указываем, что мы находимся на клиенте
     setIsClient(true);
   }, []);
+  
+  // Определяем, авторизован ли пользователь
+  const isUserAuthenticated = isClient && (!!session?.user || isAuthenticated);
 
   return (
     <div className="min-h-screen bg-slate-900 flex flex-col">
@@ -41,23 +47,14 @@ const Home: NextPage = () => {
           </div>
           
           <div className="flex space-x-4">
-            {isClient && isAuthenticated ? (
+            {isUserAuthenticated ? (
               <>
                 <Link href="/dashboard" legacyBehavior>
                   <a className="bg-indigo-600 hover:bg-indigo-700 text-white py-2 px-4 rounded-lg transition-colors">
                     Мой кабинет
                   </a>
                 </Link>
-                <Link href="/profile" legacyBehavior>
-                  <a className="bg-slate-700 hover:bg-slate-600 text-white py-2 px-4 rounded-lg transition-colors flex items-center">
-                    <span className="mr-2">{user?.username || 'Профиль'}</span>
-                    <div className="w-8 h-8 bg-indigo-500 rounded-full flex items-center justify-center">
-                      <span className="text-white text-sm font-bold">
-                        {user?.username ? user.username.charAt(0).toUpperCase() : 'U'}
-                      </span>
-                    </div>
-                  </a>
-                </Link>
+                <UserProfile />
               </>
             ) : (
               <>

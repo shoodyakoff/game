@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 import LogoutButton from '../LogoutButton';
+import UserProfile from '../UserProfile';
 
 type HeaderProps = {
   activePage: 'dashboard' | 'levels' | 'profile';
@@ -54,9 +55,9 @@ const Header: React.FC<HeaderProps> = ({ activePage }) => {
         
         <div className="flex items-center space-x-4">
           {isClient && session?.user && (
-            <span className="text-sm text-slate-300 hidden md:inline-block">
-              Привет, {session.user.name || session.user.email}
-            </span>
+            <UserProfile 
+              className="text-sm text-slate-300 hidden md:flex items-center"
+            />
           )}
           <LogoutButton />
         </div>

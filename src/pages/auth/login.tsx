@@ -1,15 +1,22 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { signIn, useSession } from 'next-auth/react';
 
+// Интерфейс для статусного сообщения
+interface StatusMessage {
+  type: 'success' | 'error' | 'info';
+  message: string;
+}
+
 export default function Login() {
   const router = useRouter();
   const { data: session, status } = useSession();
   const isLoading = status === 'loading';
   const isAuthenticated = status === 'authenticated';
+  const isMounted = useRef(true);
   
   // Объединенное состояние загрузки
   const [formLoading, setFormLoading] = useState(false);
@@ -20,6 +27,9 @@ export default function Login() {
   
   // Состояние для отслеживания попытки входа
   const [isLoggingIn, setIsLoggingIn] = useState(false);
+
+  // Статусное сообщение
+  const [statusMsg, setStatus] = useState<StatusMessage | null>(null);
 
   // Состояние формы
   const [formData, setFormData] = useState({
@@ -32,43 +42,112 @@ export default function Login() {
   const [isClient, setIsClient] = useState(false);
 
   // Получаем URL для перенаправления после авторизации
-  const { callbackUrl, error: routerError } = router.query;
+  const { callbackUrl, error: routerError, character } = router.query;
+
+  // Устанавливаем флаг монтирования
+  useEffect(() => {
+    isMounted.current = true;
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
+
+  // Проверяем, авторизован ли пользователь
+  useEffect(() => {
+    if (isAuthenticated && isMounted.current) {
+      // Если у пользователя есть выбранный персонаж, перенаправляем на дашборд
+      // В противном случае - на выбор персонажа
+      if (session?.user?.hasCharacter) {
+        const redirectPath = callbackUrl?.toString() || '/dashboard';
+        router.push(redirectPath)
+          .catch(err => {
+            console.error('Ошибка при перенаправлении после аутентификации:', err);
+          });
+      } else {
+        router.push('/character/select')
+          .catch(err => {
+            console.error('Ошибка при перенаправлении на выбор персонажа:', err);
+          });
+      }
+    }
+  }, [isAuthenticated, session, router, callbackUrl]);
+
+  // При входе через внешний провайдер (NextAuth)
+  useEffect(() => {
+    // Мониторим изменения статуса сессии NextAuth
+    if (status === 'authenticated' && session?.user && isMounted.current) {
+      // Если у пользователя есть выбранный персонаж, перенаправляем на дашборд
+      // В противном случае - на выбор персонажа
+      const redirectPath = session.user.hasCharacter 
+        ? (callbackUrl?.toString() || '/dashboard')
+        : '/character/select';
+      
+      router.push(redirectPath)
+        .catch(err => {
+          console.error('Ошибка при перенаправлении после проверки сессии:', err);
+          if (isMounted.current) {
+            window.location.href = redirectPath;
+          }
+        });
+    }
+  }, [status, session, router, callbackUrl]);
 
   // Устанавливаем флаг клиентского рендеринга
   useEffect(() => {
-    setIsClient(true);
-    
-    // Обрабатываем ошибки из URL
-    if (routerError) {
-      switch (routerError) {
-        case 'CredentialsSignin':
-          setError('Неверный email или пароль');
-          break;
-        case 'SessionRequired':
-          setError('Необходима авторизация');
-          break;
-        default:
-          setError('Произошла ошибка при входе');
-          break;
+    if (isMounted.current) {
+      setIsClient(true);
+      
+      // Обрабатываем ошибки из URL
+      if (routerError) {
+        switch (routerError) {
+          case 'CredentialsSignin':
+            setError('Неверный email или пароль');
+            break;
+          case 'SessionRequired':
+            setError('Необходима авторизация');
+            break;
+          default:
+            setError('Произошла ошибка при входе');
+            break;
+        }
       }
     }
   }, [routerError]);
 
   // Если пользователь уже авторизован, перенаправляем его
   useEffect(() => {
-    if (isAuthenticated && !isLoggingIn) {
+    if (isAuthenticated && !isLoggingIn && isMounted.current) {
       const redirectUrl = callbackUrl 
         ? decodeURIComponent(callbackUrl as string) 
         : '/dashboard';
       
       // Защита от циклических редиректов
       if (redirectUrl.includes('/auth/')) {
-        router.replace('/dashboard', undefined, { shallow: true });
+        router.replace('/dashboard', undefined, { shallow: true })
+          .catch(err => {
+            console.error('Ошибка при замене URL (циклический редирект):', err);
+          });
       } else {
-        router.replace(redirectUrl, undefined, { shallow: true });
+        router.replace(redirectUrl, undefined, { shallow: true })
+          .catch(err => {
+            console.error('Ошибка при замене URL:', err);
+            if (isMounted.current) {
+              window.location.href = redirectUrl;
+            }
+          });
       }
     }
   }, [isAuthenticated, callbackUrl, router, isLoggingIn]);
+
+  // Показываем сообщение о успешном выборе персонажа
+  useEffect(() => {
+    if (character === 'selected' && isMounted.current) {
+      setStatus({
+        type: 'success',
+        message: 'Персонаж успешно выбран! Пожалуйста, войдите снова для применения изменений.'
+      });
+    }
+  }, [character]);
 
   // Обработчик изменения полей формы
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -95,16 +174,17 @@ export default function Login() {
         throw new Error('Отсутствует подключение к интернету');
       }
 
-      // Используем NextAuth для входа
+      // Используем NextAuth для входа без автоматического редиректа
       const result = await signIn('credentials', {
-        redirect: true,
+        redirect: false, // Важно! Меняем на false чтобы предотвратить ошибку с Location
         email: formData.email,
         password: formData.password,
-        remember: formData.remember,
-        callbackUrl: '/dashboard'
+        remember: formData.remember
       });
       
-      // Этот код выполнится только если redirect: false
+      // Проверяем, что компонент всё ещё смонтирован
+      if (!isMounted.current) return;
+      
       if (result?.error) {
         switch (result.error) {
           case 'CredentialsSignin':
@@ -113,8 +193,43 @@ export default function Login() {
           default:
             setError(result.error);
         }
+      } else if (result?.ok) {
+        // Успешный вход - делаем перенаправление через router
+        // Определяем, куда перенаправить пользователя
+        let redirectTo = '/dashboard';
+        if (callbackUrl && typeof callbackUrl === 'string') {
+          // Обезопасим URL
+          redirectTo = callbackUrl.replace(/[^\w\s\/\-?=&.]/g, '');
+        }
+        
+        console.log('Логин успешен, перенаправление на:', redirectTo);
+        
+        // Добавляем задержку для завершения процессов NextAuth
+        setTimeout(() => {
+          // Перед перенаправлением проверяем, что компонент всё ещё смонтирован
+          if (!isMounted.current) return;
+          
+          try {
+            router.push(redirectTo)
+              .catch(routerErr => {
+                console.error('Ошибка при перенаправлении через router:', routerErr);
+                // Запасной вариант - используем window.location
+                if (isMounted.current) {
+                  window.location.href = redirectTo;
+                }
+              });
+          } catch (routingError) {
+            console.error('Критическая ошибка при перенаправлении:', routingError);
+            // Запасной вариант
+            if (isMounted.current) {
+              window.location.href = redirectTo;
+            }
+          }
+        }, 300); // Задержка 300 мс для завершения процессов NextAuth
       }
     } catch (err: any) {
+      if (!isMounted.current) return;
+      
       console.error('Критическая ошибка входа:', err);
       
       if (!navigator.onLine) {
@@ -123,8 +238,11 @@ export default function Login() {
         setError('Произошла ошибка при подключении к серверу');
       }
     } finally {
-      setFormLoading(false);
-      setIsLoggingIn(false);
+      if (isMounted.current) {
+        setFormLoading(false);
+        // Не сбрасываем флаг isLoggingIn здесь, чтобы перенаправление успело произойти
+        // isLoggingIn будет сброшен при успешном перенаправлении
+      }
     }
   };
 

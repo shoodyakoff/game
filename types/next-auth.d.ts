@@ -5,25 +5,27 @@ declare module "next-auth" {
   interface Session {
     user: {
       id: string;
-      name?: string;
-      email?: string;
-      image?: string;
+      name?: string | null;
+      email?: string | null;
+      image?: string | null;
       role?: string;
       hasCharacter?: boolean;
       fullName?: string;
       bio?: string;
+      characterType?: string;
     };
   }
 
   interface User {
     id: string;
-    name?: string;
-    email?: string;
-    image?: string;
+    name?: string | null;
+    email?: string | null;
+    image?: string | null;
     role?: string;
     hasCharacter?: boolean;
     fullName?: string;
     bio?: string;
+    characterType?: string;
   }
 }
 
@@ -35,5 +37,7 @@ declare module "next-auth/jwt" {
     hasCharacter?: boolean;
     fullName?: string;
     bio?: string;
+    characterType?: string;
+    dbSyncedAt?: number;
   }
 } 

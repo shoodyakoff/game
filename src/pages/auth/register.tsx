@@ -102,15 +102,17 @@ export default function Register() {
       if (response.data.success) {
         // После успешной регистрации выполняем вход
         const result = await signIn('credentials', {
-          redirect: true,
+          redirect: false,
           email: formData.email,
-          password: formData.password,
-          callbackUrl: '/dashboard'
+          password: formData.password
         });
         
-        // Этот код выполнится только если redirect: false
         if (result?.error) {
           setError(result.error);
+        } else if (result?.ok) {
+          // Успешный вход - выполняем перенаправление клиентским путем
+          console.log('Регистрация и вход успешны, перенаправление на /dashboard');
+          router.push('/dashboard');
         }
       }
     } catch (err: any) {

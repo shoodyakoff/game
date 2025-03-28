@@ -42,9 +42,10 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
       // Сохраняем текущий URL для возврата после авторизации
       const currentPath = encodeURIComponent(router.asPath);
       router.push(`/auth/login?callbackUrl=${currentPath}`);
-    } else if (requireCharacter && !hasCharacter) {
+    } else if (requireCharacter && !hasCharacter && router.pathname !== '/character/select') {
       // Если требуется персонаж, но он не выбран, перенаправляем на страницу выбора
-      router.push('/character');
+      // И проверяем, что мы не находимся уже на странице выбора персонажа
+      router.push('/character/select');
     }
   }, [isAuthenticated, requireCharacter, hasCharacter, router, isVerified]);
 

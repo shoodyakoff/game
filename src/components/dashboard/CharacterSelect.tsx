@@ -1,10 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useRouter } from 'next/router';
 import { useSession } from 'next-auth/react';
 import axios from 'axios';
 import { selectCharacter } from '../../store/slices/characterSlice';
 import { RootState } from '../../store';
+import { updateCharacterSelection, safeRedirect } from '../../lib/session';
 
 // Создаём собственную кнопку, так как компонент Button не найден
 const Button: React.FC<{
@@ -134,11 +135,26 @@ export const CharacterSelect: React.FC = () => {
   const [selectedChar, setSelectedChar] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isRedirecting, setIsRedirecting] = useState(false);
   const dispatch = useDispatch();
   const router = useRouter();
   const { redirectTo } = router.query; 
   const currentCharacter = useSelector((state: RootState) => state.character.selectedCharacter);
   const { data: session } = useSession();
+  const isMounted = useRef(true);
+
+  // Устанавливаем флаг монтирования
+  useEffect(() => {
+    isMounted.current = true;
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
+  
+  // Сброс ошибки при монтировании
+  useEffect(() => {
+    setError(null);
+  }, []);
   
   // Отладка путей изображений при монтировании компонента
   useEffect(() => {
@@ -148,115 +164,127 @@ export const CharacterSelect: React.FC = () => {
       absolute: typeof window !== 'undefined' ? new URL(char.image, window.location.origin).href : null
     })));
     
-    if (currentCharacter) {
+    if (currentCharacter && isMounted.current) {
       setSelectedChar(currentCharacter.id);
       console.log('Текущий персонаж из хранилища:', currentCharacter);
     }
   }, [currentCharacter]);
 
   const handleSelectCharacter = (character: Character) => {
-    setSelectedChar(character.id);
-    setError(null); // Сбрасываем ошибку при выборе нового персонажа
-    console.log('Выбран персонаж:', character.id);
+    console.log('handleSelectCharacter вызван:', {
+      character,
+      previousSelected: selectedChar
+    });
+    
+    if (isMounted.current) {
+      setSelectedChar(character.id);
+      setError(null);
+    }
   };
 
   const handleConfirm = async () => {
-    if (!selectedChar) return;
+    if (!selectedChar) {
+      setError('Пожалуйста, выберите персонажа');
+      return;
+    }
     
-    setIsLoading(true);
-    setError(null);
+    if (isMounted.current) {
+      setIsLoading(true);
+      setError(null);
+    }
     
     const character = characters.find(c => c.id === selectedChar);
     if (!character) {
-      setError('Выбранный персонаж не найден');
-      setIsLoading(false);
+      if (isMounted.current) {
+        setError('Выбранный персонаж не найден');
+        setIsLoading(false);
+      }
       return;
     }
     
     try {
-      console.log('Отправляем API запрос на выбор персонажа:', character.id, character.type);
-      console.log('Сессия пользователя:', session);
-      
       if (!session || !session.user) {
-        setError('Необходимо авторизоваться для выбора персонажа');
-        setIsLoading(false);
+        if (isMounted.current) {
+          setError('Необходимо авторизоваться для выбора персонажа');
+          setIsLoading(false);
+        }
         return;
       }
-      
-      // Сохраняем в Redux для обратной совместимости
+
+      // Сохраняем в Redux
       dispatch(selectCharacter(character));
       
-      // Сохраняем выбор персонажа через API
+      // Показываем, что начали процесс перенаправления
+      if (isMounted.current) {
+        setIsRedirecting(true);
+      }
+      
+      console.log('Отправка API запроса для выбора персонажа:', {
+        characterId: character.id,
+        characterType: character.type
+      });
+      
+      // Создаем контроллер для возможности отмены запроса
+      const controller = new AbortController();
+      
+      // Отправляем запрос на выбор персонажа
       const response = await axios.post('/api/character/select', {
         characterId: character.id,
         characterType: character.type
       }, {
-        headers: { 
-          'Content-Type': 'application/json'
-        },
-        withCredentials: true // Для передачи cookies с сессией
+        signal: controller.signal
       });
-      
-      console.log('Успешный API ответ:', response.data);
-      
-      // Обновляем сессию на клиенте, если API сигнализирует о необходимости
-      if (response.data.refreshSession) {
-        try {
-          console.log('Обновляем сессию на клиенте...');
-          // Вызываем специальный маршрут для обновления сессии
-          await fetch('/api/auth/refresh', { 
-            method: 'GET',
-            cache: 'no-store',
-            credentials: 'include'
-          });
-          
-          // Также обновляем стандартный ендпоинт сессии NextAuth
-          await fetch('/api/auth/session', { 
-            method: 'GET',
-            cache: 'no-store',
-            credentials: 'include'
-          });
-        } catch (sessionError) {
-          console.error('Ошибка при обновлении сессии:', sessionError);
-          // Продолжаем процесс даже при ошибке обновления сессии
-        }
+
+      // Проверяем, не размонтирован ли компонент
+      if (!isMounted.current) {
+        controller.abort();
+        return;
       }
-      
-      // После успешного сохранения перенаправляем, используя принудительное перенаправление браузера
-      if (response.data && response.data.redirect) {
-        console.log('Перенаправление по данным API:', response.data.redirect);
-        setTimeout(() => {
-          window.location.href = response.data.redirect;
-        }, 500); // Небольшая задержка для обновления сессии
-      } else if (redirectTo && typeof redirectTo === 'string') {
-        console.log('Перенаправление на:', decodeURIComponent(redirectTo));
-        setTimeout(() => {
-          window.location.href = decodeURIComponent(redirectTo);
-        }, 500);
-      } else {
-        // По умолчанию перенаправляем на /dashboard
-        console.log('Перенаправление на /dashboard');
-        setTimeout(() => {
+
+      if (!response.data) {
+        throw new Error('Нет данных в ответе API');
+      }
+
+      if (response.data.success) {
+        console.log('Персонаж успешно выбран, ответ сервера:', response.data);
+        
+        // Если сервер просит нас сделать принудительную перезагрузку
+        if (response.data.requiresReload) {
+          console.log('Выполняется принудительное обновление страницы для обновления сессии...');
+          
+          // Устанавливаем cookie с path='/', чтобы middleware мог его прочитать
+          document.cookie = 'just_selected_character=true; path=/; max-age=60'; // живет 60 секунд
+          console.log('Cookie установлен: just_selected_character=true');
+          
+          // Устанавливаем целевой URL в sessionStorage
+          window.sessionStorage.setItem('redirectAfterReload', '/dashboard');
+          
+          // Принудительно перезагружаем страницу для обновления сессии
+          console.log('Переход на /dashboard с перезагрузкой страницы');
           window.location.href = '/dashboard';
-        }, 500);
+          return;
+        }
+        
+        // Обычное перенаправление, если не требуется перезагрузка
+        console.log('Стандартное перенаправление на /dashboard');
+        safeRedirect('/dashboard');
+      } else {
+        throw new Error(response.data.message || 'Неизвестная ошибка при выборе персонажа');
       }
     } catch (err: any) {
-      console.error('Ошибка при выборе персонажа:', err);
-      const errorMessage = err.response?.data?.message || 'Произошла ошибка при сохранении персонажа';
-      setError(errorMessage);
-      
-      // Дополнительная отладка ошибки
-      if (err.response) {
-        console.error('Данные ответа:', err.response.data);
-        console.error('Статус ответа:', err.response.status);
-        console.error('Заголовки ответа:', err.response.headers);
-      } else if (err.request) {
-        console.error('Запрос был отправлен, но ответ не получен', err.request);
-      } else {
-        console.error('Ошибка при настройке запроса:', err.message);
+      // Проверяем, не был ли запрос отменен из-за размонтирования
+      if (err.name === 'CanceledError' || err.name === 'AbortError') {
+        console.log('Запрос на выбор персонажа был отменен');
+        return;
       }
-    } finally {
-      setIsLoading(false);
+      
+      console.error('Ошибка при выборе персонажа:', err);
+      
+      if (isMounted.current) {
+        setError(err.message || 'Произошла ошибка при сохранении персонажа');
+        setIsRedirecting(false);
+        setIsLoading(false);
+      }
     }
   };
 
@@ -265,6 +293,12 @@ export const CharacterSelect: React.FC = () => {
       {error && (
         <div className="bg-red-500/10 border border-red-500/50 text-red-300 px-4 py-3 rounded mb-6">
           <p>{error}</p>
+        </div>
+      )}
+      
+      {isRedirecting && (
+        <div className="bg-blue-500/10 border border-blue-500/50 text-blue-300 px-4 py-3 rounded mb-6">
+          <p>Перенаправление после выбора персонажа...</p>
         </div>
       )}
       
@@ -277,13 +311,12 @@ export const CharacterSelect: React.FC = () => {
             }`}
             onClick={() => handleSelectCharacter(character)}
           >
-            <div className="flex flex-col items-center">
+            <div className="flex flex-col items-center pointer-events-none">
               <div className="w-24 h-24 flex items-center justify-center mb-4">
                 <img
-                  src={`${character.image}?t=${new Date().getTime()}`}
+                  src={character.image}
                   alt={character.name}
                   className="max-h-24 max-w-full object-contain"
-                  onLoad={() => console.log(`Изображение успешно загружено: ${character.image}`)}
                   onError={(e) => {
                     console.error(`Ошибка загрузки изображения для ${character.name}: ${character.image}`);
                     e.currentTarget.src = '/characters/product-lead-icon.png';
@@ -296,46 +329,29 @@ export const CharacterSelect: React.FC = () => {
               
               <div className="w-full">
                 <div className="grid grid-cols-1 gap-1 text-xs">
-                  <div>
-                    <span className="text-gray-400">Аналитика:</span> 
-                    <span className="text-indigo-300 ml-1">{character.stats.analytics}/10</span>
-                  </div>
-                  <div>
-                    <span className="text-gray-400">Коммуникация:</span> 
-                    <span className="text-indigo-300 ml-1">{character.stats.communication}/10</span>
-                  </div>
-                  <div>
-                    <span className="text-gray-400">Стратегия:</span> 
-                    <span className="text-indigo-300 ml-1">{character.stats.strategy}/10</span>
-                  </div>
-                  <div>
-                    <span className="text-gray-400">Технические:</span> 
-                    <span className="text-indigo-300 ml-1">{character.stats.technical}/10</span>
-                  </div>
-                  <div>
-                    <span className="text-gray-400">Креативность:</span> 
-                    <span className="text-indigo-300 ml-1">{character.stats.creativity}/10</span>
-                  </div>
-                  {character.stats.leadership && (
-                    <div>
-                      <span className="text-gray-400">Лидерство:</span> 
-                      <span className="text-indigo-300 ml-1">{character.stats.leadership}/10</span>
+                  {Object.entries(character.stats).map(([stat, value]) => (
+                    <div key={stat}>
+                      <span className="text-gray-400">{stat}:</span> 
+                      <span className="text-indigo-300 ml-1">{value}/10</span>
                     </div>
-                  )}
+                  ))}
                 </div>
               </div>
             </div>
           </div>
         ))}
       </div>
-      <div className="flex justify-center">
+      <div className="flex flex-col items-center justify-center">
         <Button 
           onClick={handleConfirm} 
-          disabled={!selectedChar || isLoading}
+          disabled={!selectedChar || isLoading || isRedirecting}
           className="px-8 py-3"
         >
-          {isLoading ? "Сохранение..." : "Подтвердить выбор"}
+          {isLoading ? "Сохранение..." : isRedirecting ? "Перенаправление..." : "Подтвердить выбор"}
         </Button>
+        {!selectedChar && (
+          <p className="text-gray-400 text-sm mt-2">Выберите персонажа, чтобы продолжить</p>
+        )}
       </div>
     </div>
   );

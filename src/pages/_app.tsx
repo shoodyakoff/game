@@ -9,6 +9,7 @@ import Head from 'next/head';
 import { AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/router';
 import { SessionProvider } from 'next-auth/react';
+import SessionManager from '../components/auth/SessionManager';
 
 // Компонент для выполнения инициализации
 function AppInitializer({ children }: { children: React.ReactNode }) {
@@ -49,6 +50,7 @@ function MyApp({ Component, pageProps: { session, ...pageProps } }: AppProps) {
           <meta property="twitter:description" content="Обучающий игровой портал для развития профессиональных навыков через увлекательные игры и симуляции" />
           <meta property="twitter:image" content="https://gameportal.example.com/images/twitter-image.jpg" />
         </Head>
+        <SessionManager />
         <AnimatePresence mode="wait" initial={false}>
           <AppInitializer>
             <Component {...pageProps} key={router.route} />
