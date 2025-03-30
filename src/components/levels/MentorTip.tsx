@@ -1,12 +1,14 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import Image from 'next/image';
 
 type MentorTipProps = {
   tip: string;
   avatar?: string;
   name?: string;
   showIcon?: boolean;
-  position?: 'top-right' | 'bottom-right' | 'bottom-left' | 'top-left';
+  position?: 'top-right' | 'bottom-right' | 'bottom-left' | 'top-left' | 'right-bottom';
+  defaultOpen?: boolean;
 };
 
 const MentorTip: React.FC<MentorTipProps> = ({
@@ -14,50 +16,144 @@ const MentorTip: React.FC<MentorTipProps> = ({
   avatar = '/characters/avatar_mentor.png',
   name = 'Ментор',
   showIcon = true,
-  position = 'top-right'
+  position = 'right-bottom',
+  defaultOpen = false
 }) => {
-  const [isOpen, setIsOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(defaultOpen);
+  const [tooltipPosition, setTooltipPosition] = useState({ top: 0, left: 0 });
+  const [hasBeenOpened, setHasBeenOpened] = useState(defaultOpen);
+  const iconRef = useRef<HTMLDivElement>(null);
+  const tooltipRef = useRef<HTMLDivElement>(null);
   
-  // Определяем позицию блока с подсказкой
+  // Автоматически закрываем подсказку через 10 секунд, если она открыта по умолчанию
+  useEffect(() => {
+    if (defaultOpen) {
+      setHasBeenOpened(true);
+      const timer = setTimeout(() => {
+        setIsOpen(false);
+      }, 10000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [defaultOpen]);
+
+  // Вычисление позиции подсказки относительно иконки при открытии
+  useEffect(() => {
+    if (isOpen && iconRef.current && tooltipRef.current) {
+      const calculatePosition = () => {
+        const iconRect = iconRef.current!.getBoundingClientRect();
+        const tooltipRect = tooltipRef.current!.getBoundingClientRect();
+        const windowWidth = window.innerWidth;
+        const windowHeight = window.innerHeight;
+        
+        let top = 0;
+        let left = 0;
+        
+        // По умолчанию располагаем справа и снизу от иконки
+        left = iconRect.right + 16;
+        top = iconRect.top;
+        
+        // Проверяем, не выходит ли подсказка за пределы экрана
+        if (left + tooltipRect.width > windowWidth) {
+          // Если выходит за правую границу, располагаем слева от иконки
+          left = Math.max(0, iconRect.left - tooltipRect.width - 16);
+        }
+        
+        if (top + tooltipRect.height > windowHeight) {
+          // Если выходит за нижнюю границу, поднимаем вверх так, чтобы поместилась
+          top = Math.max(0, windowHeight - tooltipRect.height - 16);
+        }
+        
+        setTooltipPosition({ top, left });
+      };
+      
+      calculatePosition();
+      
+      // Пересчитываем позицию при изменении размеров окна
+      window.addEventListener('resize', calculatePosition);
+      
+      return () => {
+        window.removeEventListener('resize', calculatePosition);
+      };
+    }
+  }, [isOpen, position]);
+  
+  // Определяем класс позиции для классического метода позиционирования
   const positionClasses = {
     'top-right': 'bottom-full right-0 mb-2',
     'bottom-right': 'top-full right-0 mt-2',
     'bottom-left': 'top-full left-0 mt-2',
-    'top-left': 'bottom-full left-0 mb-2'
+    'top-left': 'bottom-full left-0 mb-2',
+    'right-bottom': '' // Пустой, так как используем кастомное позиционирование
+  };
+
+  const handleClick = () => {
+    setIsOpen(!isOpen);
+    setHasBeenOpened(true);
   };
   
   return (
     <div className="relative inline-block">
       {/* Иконка наставника */}
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="bg-yellow-500/20 text-yellow-500 p-2 rounded-full hover:bg-yellow-500/30 transition-all cursor-pointer"
+      <motion.div
+        ref={iconRef}
+        onClick={handleClick}
+        className="rounded-full hover:ring-2 hover:ring-yellow-500 transition-all cursor-pointer overflow-hidden group relative"
         title="Совет ментора"
+        animate={!isOpen && !hasBeenOpened ? { scale: [1, 1.05, 1] } : {}}
+        transition={{ 
+          repeat: Infinity, 
+          duration: 2, 
+          ease: "easeInOut" 
+        }}
       >
-        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z" />
-        </svg>
-      </button>
+        <div className="w-12 h-12 rounded-full overflow-hidden">
+          <Image 
+            src={avatar} 
+            alt={name} 
+            width={48} 
+            height={48} 
+            className="object-cover transform scale-110"
+          />
+        </div>
+        
+        {/* Индикатор непрочитанной подсказки */}
+        {!hasBeenOpened && (
+          <div className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full border-2 border-indigo-950 flex items-center justify-center">
+            <span className="text-white text-xs font-bold">!</span>
+          </div>
+        )}
+        
+        {/* Текстовая подсказка при наведении */}
+        <div className="absolute opacity-0 group-hover:opacity-100 -top-8 left-1/2 transform -translate-x-1/2 bg-indigo-950/90 text-white text-xs py-1 px-2 rounded whitespace-nowrap transition-opacity duration-200">
+          Нажмите для подсказки ментора
+        </div>
+      </motion.div>
       
       {/* Всплывающая подсказка с анимацией */}
       <AnimatePresence>
         {isOpen && (
           <motion.div 
-            className={`absolute z-50 w-72 bg-yellow-900/30 border-l-4 border-yellow-500 p-4 rounded-r-md shadow-lg ${positionClasses[position]}`}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 10 }}
+            ref={tooltipRef}
+            className="fixed z-50 w-80 bg-indigo-950/95 border-l-4 border-yellow-500 p-4 rounded-md shadow-xl"
+            style={{ 
+              top: `${tooltipPosition.top}px`, 
+              left: `${tooltipPosition.left}px`
+            }}
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
             transition={{ duration: 0.2 }}
           >
             <div className="flex items-start">
-              {avatar && (
-                <div className="flex-shrink-0 mr-3">
-                  <img src={avatar} alt={name} className="w-8 h-8 rounded-full" />
+              <div className="flex-shrink-0 mr-3">
+                <div className="w-10 h-10 rounded-full overflow-hidden">
+                  <Image src={avatar} alt={name} width={40} height={40} className="object-cover" />
                 </div>
-              )}
-              <div>
+              </div>
+              <div className="flex-1">
                 <h4 className="font-bold text-yellow-500 mb-1">{name}</h4>
-                <p className="text-slate-300">{tip}</p>
+                <p className="text-slate-100 text-sm leading-relaxed">{tip}</p>
               </div>
               <button 
                 onClick={() => setIsOpen(false)}

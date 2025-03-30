@@ -2,6 +2,7 @@ import React from 'react';
 import { useRouter } from 'next/router';
 import { styles } from '../common/styles';
 import { LevelStage, getNextStage } from '../common/LevelStages';
+import MentorTip from '../../../../components/common/MentorTip';
 
 const Introduction: React.FC = () => {
   const router = useRouter();
@@ -14,6 +15,26 @@ const Introduction: React.FC = () => {
   return (
     <div className={styles.container}>
       <h2 className={styles.header}>Добро пожаловать в TaskMaster!</h2>
+      
+      <div className="flex justify-end mb-4">
+        <MentorTip
+          content={
+            <>
+              <h3 className="text-lg font-bold mb-2">Введение в продуктовое мышление</h3>
+              <p className="mb-2">В этом уровне вы познакомитесь с основами продуктового мышления и узнаете, как применять его на практике.</p>
+              <p className="mb-2">Что вы изучите:</p>
+              <ul className="list-disc pl-5 space-y-1">
+                <li>Что такое продуктовое мышление и почему оно важно</li>
+                <li>Как анализировать пользовательский опыт</li>
+                <li>Какие метрики важны для продукта</li>
+                <li>Как принимать решения, основанные на данных</li>
+              </ul>
+            </>
+          }
+          position="left"
+          className="z-10"
+        />
+      </div>
       
       <section className={styles.section}>
         <h3 className={styles.subheader}>О компании</h3>
@@ -74,17 +95,8 @@ const Introduction: React.FC = () => {
           className={styles.btnPrimary}
           onClick={handleContinue}
         >
-          Начать уровень
+          Начать обучение
         </button>
-      </div>
-      
-      <div className={styles.mentorTip}>
-        <h4 className={styles.mentorTipTitle}>Совет ментора:</h4>
-        <p className={styles.mentorTipText}>
-          В работе продакт-менеджера важно опираться на данные и глубокое понимание пользователей. 
-          Не торопитесь сразу предлагать решения — сначала тщательно изучите проблему, проанализируйте 
-          метрики и отзывы пользователей, и только потом приступайте к разработке решения.
-        </p>
       </div>
     </div>
   );

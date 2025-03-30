@@ -1,252 +1,270 @@
 import React, { useState } from 'react';
 import { styles } from '../common/styles';
+import StepNavigation from '../../StepNavigation';
+import MentorTip from '../../MentorTip';
 
-interface ProblemStatement {
-  id: string;
-  text: string;
-  quality: 'good' | 'average' | 'poor';
-  feedback: string;
+interface ProductThinkingPracticeProps {
+  onComplete: () => void;
 }
 
-type ProductThinkingPracticeProps = {
-  onComplete: () => void;
-};
+const ProductThinkingPractice: React.FC<ProductThinkingPracticeProps> = ({ onComplete }) => {
+  // Используем отдельное состояние для каждого вопроса
+  const [answers, setAnswers] = useState({
+    question1: '',
+    question2: '',
+    question3: '',
+    question4: ''
+  });
+  
+  const handleAnswerChange = (question: keyof typeof answers, value: string) => {
+    setAnswers(prev => ({
+      ...prev,
+      [question]: value
+    }));
+  };
+  
+  // Шаги практического задания
+  const practiceSteps = [
+    // Шаг 1: Введение в практическое задание
+    <div key="practice-step-1">
+      <h2 className={styles.header}>Практическое задание: Продуктовое мышление</h2>
+      
+      <p className={styles.text}>
+        В этом практическом задании вы будете применять принципы продуктового мышления к реальному кейсу.
+        Представьте, что вы работаете над улучшением мобильного приложения TaskMaster для управления задачами.
+      </p>
+      
+      <p className={styles.text}>
+        Ваша задача - проанализировать продукт с точки зрения добавочной ценности и ответить на ключевые вопросы, которые помогут вам лучше понять, как улучшить продукт.
+      </p>
 
-const ProductThinkingPractice = ({ onComplete }: ProductThinkingPracticeProps) => {
-  const [selectedProblem, setSelectedProblem] = useState<string | null>(null);
-  const [userProblem, setUserProblem] = useState<string>('');
-  const [submitted, setSubmitted] = useState<boolean>(false);
-  const [feedback, setFeedback] = useState<string>('');
-  const [feedbackQuality, setFeedbackQuality] = useState<'excellent' | 'good' | 'average' | 'poor' | ''>('');
-  
-  const problemStatements: ProblemStatement[] = [
-    {
-      id: '1',
-      text: 'Пользователям сложно создавать задачи в TaskMaster.',
-      quality: 'poor',
-      feedback: 'Это слишком общая формулировка. В ней не указана конкретная проблема, нет количественных данных, не определена целевая аудитория и не указаны последствия проблемы для бизнеса.'
-    },
-    {
-      id: '2',
-      text: 'Процесс создания задач в TaskMaster занимает много времени и вызывает трудности у новых пользователей.',
-      quality: 'average',
-      feedback: 'Формулировка становится более конкретной — упоминается время и целевая аудитория (новые пользователи), но всё ещё не хватает количественных данных и бизнес-последствий.'
-    },
-    {
-      id: '3',
-      text: 'Новые пользователи тратят в среднем 3 минуты на создание задачи в TaskMaster, и 40% из них не завершают процесс из-за сложности формы, что приводит к низкой конверсии и негативно влияет на удержание пользователей.',
-      quality: 'good',
-      feedback: 'Отличная формулировка! В ней присутствуют конкретные данные (3 минуты, 40%), указана целевая аудитория (новые пользователи), определена причина проблемы (сложность формы) и бизнес-последствия (низкая конверсия и удержание).'
-    }
-  ];
-  
-  const keywordGroups = [
-    ['время', 'минут', 'секунд', 'длительность', 'долго', 'быстро'],
-    ['новые пользователи', 'новички', 'начинающие', 'первый раз', 'неопытные'],
-    ['конверсия', 'завершение', 'бросают', 'не заканчивают', 'отказ', 'воронка'],
-    ['процент', '%', 'доля', 'часть', 'количество', 'число', 'метрика'],
-    ['бизнес', 'доход', 'прибыль', 'ценность', 'рост', 'удержание', 'отток']
-  ];
-  
-  const checkForQualityKeywords = (text: string): number => {
-    let matchCount = 0;
-    const lowercaseText = text.toLowerCase();
-    
-    keywordGroups.forEach(group => {
-      if (group.some(keyword => lowercaseText.includes(keyword.toLowerCase()))) {
-        matchCount++;
-      }
-    });
-    
-    return matchCount;
-  };
-  
-  const handleProblemSelection = (id: string) => {
-    setSelectedProblem(id);
-    setSubmitted(false);
-    setFeedback('');
-    setFeedbackQuality('');
-  };
-  
-  const handleUserProblemChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setUserProblem(e.target.value);
-    setSubmitted(false);
-    setFeedback('');
-    setFeedbackQuality('');
-  };
-  
-  const handleSubmit = () => {
-    if (selectedProblem) {
-      const selected = problemStatements.find(p => p.id === selectedProblem);
-      if (selected) {
-        setFeedback(selected.feedback);
-        setFeedbackQuality(selected.quality === 'good' ? 'excellent' : selected.quality === 'average' ? 'good' : 'poor');
-      }
-    } else if (userProblem.trim()) {
-      const keywordCount = checkForQualityKeywords(userProblem);
-      
-      if (keywordCount >= 4) {
-        setFeedbackQuality('excellent');
-        setFeedback('Отличная формулировка проблемы! Вы включили конкретные данные, определили целевую аудиторию, указали причину проблемы и её бизнес-последствия. Такая формулировка значительно облегчит поиск эффективного решения.');
-      } else if (keywordCount >= 2) {
-        setFeedbackQuality('good');
-        setFeedback('Хорошая формулировка, но можно улучшить. Постарайтесь добавить больше конкретных данных, чётко определить целевую аудиторию и указать бизнес-последствия проблемы.');
-      } else {
-        setFeedbackQuality('poor');
-        setFeedback('Формулировка слишком общая. Попробуйте описать проблему более конкретно, используя количественные данные, указав целевую аудиторию и бизнес-последствия.');
-      }
-    }
-    
-    setSubmitted(true);
-  };
-  
-  const completeExercise = () => {
-    onComplete();
-  };
-  
-  return (
-    <div className={styles.container}>
-      <h1 className={styles.header}>Продуктовое мышление: практика</h1>
-      
-      <section className={styles.section}>
-        <h2 className={styles.subheader}>Определение проблемы</h2>
-        <p className={styles.text}>
-          Первый важный навык продуктового мышления — умение правильно формулировать проблему. 
-          Точная и конкретная формулировка проблемы помогает найти эффективное решение.
-        </p>
-        <p className={styles.text}>
-          Хорошая формулировка проблемы должна включать:
-        </p>
-        <ul className={styles.list}>
-          <li>Конкретные данные и метрики</li>
-          <li>Целевую аудиторию, испытывающую проблему</li>
-          <li>Причину возникновения проблемы</li>
-          <li>Последствия для пользователей и бизнеса</li>
-        </ul>
-      </section>
-      
-      <section className={styles.section}>
-        <h2 className={styles.subheader}>Задание 1: Оцените формулировки проблемы</h2>
-        <p className={styles.text}>
-          Ниже представлены различные формулировки проблемы процесса создания задач в TaskMaster. 
-          Выберите одну и получите обратную связь о её качестве.
-        </p>
+      <div className="bg-slate-800 p-6 rounded-lg border border-slate-700 mt-6 mb-6">
+        <h3 className="text-xl font-semibold text-indigo-400 mb-4">О продукте TaskMaster</h3>
         
-        <div className="space-y-4 mb-6">
-          {problemStatements.map(problem => (
-            <div 
-              key={problem.id} 
-              className={`p-4 rounded-lg cursor-pointer transition-all ${selectedProblem === problem.id ? 'bg-indigo-600 border-indigo-500 text-white' : 'bg-slate-700 border border-slate-600 text-slate-300 hover:bg-slate-600'}`}
-              onClick={() => handleProblemSelection(problem.id)}
-            >
-              <p className="text-inherit">{problem.text}</p>
-            </div>
-          ))}
-        </div>
-        
-        <div className="flex items-center justify-center my-6">
-          <div className="flex-1 h-px bg-slate-600"></div>
-          <span className="px-4 text-slate-400">или</span>
-          <div className="flex-1 h-px bg-slate-600"></div>
-        </div>
-        
-        <h2 className={styles.subheader}>Задание 2: Сформулируйте проблему самостоятельно</h2>
-        <p className={styles.text}>
-          Опираясь на данные и отзывы команды TaskMaster, сформулируйте проблему процесса создания задач 
-          своими словами. Постарайтесь сделать формулировку максимально конкретной и полезной для поиска решения.
-        </p>
-        
-        <textarea 
-          className={styles.textarea}
-          placeholder="Сформулируйте проблему здесь..."
-          value={userProblem}
-          onChange={handleUserProblemChange}
-          rows={5}
-        />
-        
-        <button 
-          className={styles.btnPrimary}
-          onClick={handleSubmit}
-          disabled={!selectedProblem && !userProblem.trim()}
-        >
-          Получить обратную связь
-        </button>
-        
-        {submitted && feedback && (
-          <div className={`mt-6 p-4 rounded-lg border ${
-            feedbackQuality === 'excellent' ? 'bg-green-900/30 border-green-500 text-green-400' : 
-            feedbackQuality === 'good' ? 'bg-blue-900/30 border-blue-500 text-blue-400' : 
-            feedbackQuality === 'average' ? 'bg-yellow-900/30 border-yellow-500 text-yellow-400' : 
-            'bg-red-900/30 border-red-500 text-red-400'
-          }`}>
-            <h3 className="text-lg font-semibold mb-2">
-              {feedbackQuality === 'excellent' ? 'Отлично!' : 
-               feedbackQuality === 'good' ? 'Хорошо!' : 
-               feedbackQuality === 'average' ? 'Неплохо!' : 'Можно лучше!'}
-            </h3>
-            <p className="text-slate-300">{feedback}</p>
+        <div className="space-y-4">
+          <div>
+            <h4 className="text-lg font-medium text-white mb-2">Описание продукта:</h4>
+            <p className="text-slate-300">
+              TaskMaster - мобильное приложение для управления задачами, помогающее пользователям организовывать и отслеживать свои ежедневные дела, проекты и обязанности.
+            </p>
           </div>
-        )}
-      </section>
-      
-      <section className={styles.section}>
-        <h2 className={styles.subheader}>Практические рекомендации</h2>
-        <div className="bg-indigo-900/30 border border-indigo-800 rounded-lg p-4 mt-4 mb-6">
-          <h3 className="text-lg font-semibold text-indigo-400 mb-2">Как улучшить формулировку проблемы:</h3>
-          <ul className={styles.list}>
-            <li>
-              <strong>Будьте конкретны:</strong> Вместо "много пользователей" используйте "40% новых пользователей"
-            </li>
-            <li>
-              <strong>Используйте данные:</strong> "В среднем 3 минуты" вместо "много времени"
-            </li>
-            <li>
-              <strong>Укажите последствия:</strong> "Что приводит к снижению конверсии на 20% и увеличению оттока пользователей"
-            </li>
-            <li>
-              <strong>Сегментируйте аудиторию:</strong> "Новые пользователи мобильной версии" вместо "пользователи"
-            </li>
-            <li>
-              <strong>Укажите причину:</strong> "Из-за сложности формы и неясных обязательных полей" 
-            </li>
-          </ul>
+
+          <div>
+            <h4 className="text-lg font-medium text-white mb-2">Целевая аудитория:</h4>
+            <ul className="list-disc list-inside text-slate-300">
+              <li>Менеджеры проектов</li>
+              <li>Предприниматели</li>
+              <li>HR-специалисты</li>
+              <li>Студенты</li>
+              <li>Активные пользователи: 25-45 лет</li>
+            </ul>
+          </div>
+
+          <div>
+            <h4 className="text-lg font-medium text-white mb-2">Ключевые метрики:</h4>
+            <ul className="list-disc list-inside text-slate-300">
+              <li>Время создания задачи: 3 мин 24 сек</li>
+              <li>Отказы при создании: 55%</li>
+              <li>Конверсия на Desktop: 58%</li>
+              <li>Конверсия на мобильных: 32%</li>
+              <li>Конверсия на планшетах: 45%</li>
+            </ul>
+          </div>
+
+          <div>
+            <h4 className="text-lg font-medium text-white mb-2">Основные проблемы пользователей:</h4>
+            <ul className="list-disc list-inside text-slate-300">
+              <li>Много обязательных полей при создании задачи</li>
+              <li>Неудобно использовать на мобильных устройствах</li>
+              <li>Сложный и неинтуитивный интерфейс</li>
+              <li>Высокие временные затраты на создание простых задач</li>
+            </ul>
+          </div>
+
+          <div>
+            <h4 className="text-lg font-medium text-white mb-2">Текущий процесс создания задачи:</h4>
+            <ol className="list-decimal list-inside text-slate-300">
+              <li>Главный экран → кнопка "Новая задача"</li>
+              <li>Обязательные поля: название, дата, проект, приоритет, исполнитель</li>
+              <li>Дополнительные поля: описание, вложения, теги, связанные задачи</li>
+              <li>Настройки: уведомления, повторение, видимость, доступ</li>
+              <li>Предпросмотр и подтверждение</li>
+            </ol>
+          </div>
         </div>
-      </section>
+      </div>
+
+      <div className="mt-6">
+        <MentorTip
+          tip="В практических заданиях вы будете применять полученные знания к реальным ситуациям. Это поможет закрепить теоретический материал и развить навыки продуктового мышления."
+          position="bottom-right"
+          avatar="/characters/avatar_mentor.png"
+          name="Ментор"
+          defaultOpen={false}
+        />
+      </div>
+    </div>,
+    
+    // Шаг 2: Первый вопрос
+    <div key="practice-step-2">
+      <h2 className={styles.subheader}>Добавочная ценность — насколько один продукт эффективнее другого решает задачу</h2>
       
-      <div className={styles.mentorTip}>
-        <h3 className={styles.mentorTipTitle}>Совет ментора:</h3>
-        <p className={styles.mentorTipText}>
-          Часто команды бросаются решать проблему, которая плохо определена, и в итоге создают решения, 
-          которые не решают реальных трудностей пользователей. Потратив больше времени на точное определение 
-          проблемы, вы сэкономите недели на разработке ненужных функций и существенно повысите шансы на успех.
+      <p className={styles.text}>
+        Ответьте на следующий вопрос:
+      </p>
+      
+      <div className="bg-indigo-950/30 p-4 rounded-md border-l-4 border-indigo-500 my-4">
+        <h3 className="font-semibold text-lg text-white mb-2">Вопрос 1:</h3>
+        <p className="text-slate-200">
+          Как именно ваш продукт повышает эффективность решения задачи людей?
         </p>
       </div>
       
-      {submitted && (
-        <div className="mt-8">
-          <div className={`p-4 rounded-lg ${
-            feedbackQuality === 'excellent' || feedbackQuality === 'good' 
-              ? 'bg-green-800/30 border border-green-700' 
-              : 'bg-yellow-800/30 border border-yellow-700'
-          }`}>
-            <h3 className="text-lg font-semibold text-slate-300 mb-2">
-              {feedbackQuality === 'excellent' || feedbackQuality === 'good' 
-                ? 'Хорошая работа!' 
-                : 'Есть над чем поработать'}
-            </h3>
-            <p className="text-slate-300">{feedback}</p>
+      <textarea
+        className="w-full bg-slate-800 text-white p-4 rounded border border-slate-600 min-h-32 mt-4"
+        placeholder="Введите ваш ответ здесь..."
+        value={answers.question1}
+        onChange={(e) => handleAnswerChange('question1', e.target.value)}
+      />
+      
+      <p className="text-sm text-slate-400 mt-2">
+        Ответ на этот вопрос не будет проверяться. Он необходим для рефлексии по обсуждаемой теме.
+      </p>
+    </div>,
+    
+    // Шаг 3: Второй вопрос
+    <div key="practice-step-3">
+      <h2 className={styles.subheader}>Анализ альтернативных решений</h2>
+      
+      <p className={styles.text}>
+        Ответьте на следующий вопрос:
+      </p>
+      
+      <div className="bg-indigo-950/30 p-4 rounded-md border-l-4 border-indigo-500 my-4">
+        <h3 className="font-semibold text-lg text-white mb-2">Вопрос 2:</h3>
+        <p className="text-slate-200">
+          Относительно каких альтернативных способов и в каких обстоятельствах продукт создает максимальную добавочную ценность?
+        </p>
+      </div>
+      
+      <textarea
+        className="w-full bg-slate-800 text-white p-4 rounded border border-slate-600 min-h-32 mt-4"
+        placeholder="Введите ваш ответ здесь..."
+        value={answers.question2}
+        onChange={(e) => handleAnswerChange('question2', e.target.value)}
+      />
+      
+      <p className="text-sm text-slate-400 mt-2">
+        Ответ на этот вопрос не будет проверяться. Он необходим для рефлексии по обсуждаемой теме.
+      </p>
+    </div>,
+    
+    // Шаг 4: Третий вопрос
+    <div key="practice-step-4">
+      <h2 className={styles.subheader}>Измерение добавочной ценности</h2>
+      
+      <p className={styles.text}>
+        Ответьте на следующий вопрос:
+      </p>
+      
+      <div className="bg-indigo-950/30 p-4 rounded-md border-l-4 border-indigo-500 my-4">
+        <h3 className="font-semibold text-lg text-white mb-2">Вопрос 3:</h3>
+        <p className="text-slate-200">
+          Как вы измеряете эту добавочную ценность? Измеряете ли?
+        </p>
+      </div>
+      
+      <textarea
+        className="w-full bg-slate-800 text-white p-4 rounded border border-slate-600 min-h-32 mt-4"
+        placeholder="Введите ваш ответ здесь..."
+        value={answers.question3}
+        onChange={(e) => handleAnswerChange('question3', e.target.value)}
+      />
+      
+      <p className="text-sm text-slate-400 mt-2">
+        Ответ на этот вопрос не будет проверяться. Он необходим для рефлексии по обсуждаемой теме.
+      </p>
+    </div>,
+    
+    // Шаг 5: Четвертый вопрос
+    <div key="practice-step-5">
+      <h2 className={styles.subheader}>Оценка эффективности</h2>
+      
+      <p className={styles.text}>
+        Ответьте на следующий вопрос:
+      </p>
+      
+      <div className="bg-indigo-950/30 p-4 rounded-md border-l-4 border-indigo-500 my-4">
+        <h3 className="font-semibold text-lg text-white mb-2">Вопрос 4:</h3>
+        <p className="text-slate-200">
+          Насколько вы повысили эффективность решения задачи пользователей за прошлый год? Насколько вы увеличили отрыв от конкурентов в эффективности решения задачи за последнее время?
+        </p>
+      </div>
+      
+      <textarea
+        className="w-full bg-slate-800 text-white p-4 rounded border border-slate-600 min-h-32 mt-4"
+        placeholder="Введите ваш ответ здесь..."
+        value={answers.question4}
+        onChange={(e) => handleAnswerChange('question4', e.target.value)}
+      />
+      
+      <p className="text-sm text-slate-400 mt-2">
+        Ответ на этот вопрос не будет проверяться. Он необходим для рефлексии по обсуждаемой теме.
+      </p>
+      
+      <div className="mt-6">
+        <MentorTip
+          tip="Ответы на эти вопросы помогут вам лучше понять, как ваш продукт создает ценность для пользователей и как эту ценность можно измерить и увеличить."
+          position="right-bottom"
+          avatar="/characters/avatar_mentor.png"
+          name="Ментор"
+          defaultOpen={false}
+        />
+      </div>
+      
+      <div className="bg-indigo-900/30 p-5 rounded-lg border border-indigo-700 mt-10">
+        <h3 className="font-semibold text-lg text-white mb-3">Ваши ответы:</h3>
+        
+        <div className="space-y-4">
+          <div>
+            <h4 className="font-medium text-indigo-300">Вопрос 1:</h4>
+            <p className="text-slate-200 bg-indigo-950/50 p-3 rounded border border-indigo-800/50 min-h-12">
+              {answers.question1 || "Вы пока не ответили на этот вопрос"}
+            </p>
           </div>
           
-          <div className="flex justify-end mt-6">
-            <button
-              className={styles.btnPrimary}
-              onClick={completeExercise}
-            >
-              Завершить упражнение
-            </button>
+          <div>
+            <h4 className="font-medium text-indigo-300">Вопрос 2:</h4>
+            <p className="text-slate-200 bg-indigo-950/50 p-3 rounded border border-indigo-800/50 min-h-12">
+              {answers.question2 || "Вы пока не ответили на этот вопрос"}
+            </p>
+          </div>
+          
+          <div>
+            <h4 className="font-medium text-indigo-300">Вопрос 3:</h4>
+            <p className="text-slate-200 bg-indigo-950/50 p-3 rounded border border-indigo-800/50 min-h-12">
+              {answers.question3 || "Вы пока не ответили на этот вопрос"}
+            </p>
+          </div>
+          
+          <div>
+            <h4 className="font-medium text-indigo-300">Вопрос 4:</h4>
+            <p className="text-slate-200 bg-indigo-950/50 p-3 rounded border border-indigo-800/50 min-h-12">
+              {answers.question4 || "Вы пока не ответили на этот вопрос"}
+            </p>
           </div>
         </div>
-      )}
+      </div>
+    </div>
+  ];
+  
+  return (
+    <div className={styles.container}>
+      <StepNavigation 
+        steps={practiceSteps} 
+        onComplete={onComplete}
+        completeButtonText="Далее"
+      />
     </div>
   );
 };
