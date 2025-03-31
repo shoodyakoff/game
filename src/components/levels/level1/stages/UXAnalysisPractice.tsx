@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { styles } from '../common/styles';
 import uxAnalysisData from '../data/uxAnalysisData';
-import MentorTip from '../../../../components/common/MentorTip';
-import StepNavigation from '../../../../components/common/StepNavigation';
+import MentorTip from '../../shared/feedback/MentorTip';
+import StepNavigation from '../../shared/navigation/StepNavigation';
 
 interface UserSegment {
   id: string;
@@ -435,314 +435,78 @@ const UXAnalysisPractice: React.FC<UXAnalysisPracticeProps> = ({ onComplete }) =
     );
   };
   
-  const steps = [
-    // Шаг 1: Описание кейса и анализ текущей ситуации
-    <div key="case-analysis" className={styles.section}>
+  const stepsContent = [
+    // Шаг 1: Введение в практическое задание
+    <div key="intro" className={styles.section}>
       <h1 className={styles.header}>UX-анализ: практика</h1>
       
       <div className="bg-slate-800/50 p-6 rounded-lg border border-slate-700 mb-8">
-        <h2 className="text-xl font-semibold text-indigo-400 mb-4">Кейс TaskMaster</h2>
-        <p className="text-slate-300 mb-4">
-          Вы - UX-аналитик в команде TaskMaster. Недавние исследования показали, что пользователи 
-          испытывают трудности при создании задач, особенно с мобильных устройств. Ваша задача - 
-          провести UX-анализ и предложить решения для улучшения пользовательского опыта.
+        <h2 className={styles.subheader}>Практическое задание по UX-анализу</h2>
+        <p className={styles.text}>
+          В этом практическом задании вы будете применять принципы UX-анализа для улучшения процесса создания задачи в приложении TaskMaster.
+          Вам предстоит проанализировать пользовательские сегменты и путь пользователя, выявить проблемы и предложить решения.
         </p>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <h3 className="text-lg font-semibold text-white mb-2">Текущие метрики:</h3>
-            <ul className="list-disc list-inside text-slate-300">
-              <li>Время создания задачи: 3 мин 24 сек</li>
-              <li>Отказы при создании: 55%</li>
-              <li>Конверсия на Desktop: 58%</li>
-              <li>Конверсия на мобильных: 32%</li>
-            </ul>
+        <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="bg-indigo-900/30 p-4 rounded-lg">
+            <h3 className="text-indigo-400 font-semibold mb-2">Анализ сегментов пользователей</h3>
+            <p className="text-slate-300">
+              Изучите различные группы пользователей, их потребности и проблемы, с которыми они сталкиваются
+              при создании задач в TaskMaster.
+            </p>
           </div>
           
-          <div>
-            <h3 className="text-lg font-semibold text-white mb-2">Отзывы пользователей:</h3>
-            <ul className="list-disc list-inside text-slate-300">
-              <li>"Слишком много обязательных полей"</li>
-              <li>"Неудобно использовать на телефоне"</li>
-              <li>"Непонятно, какие поля важны"</li>
-              <li>"Процесс занимает много времени"</li>
-            </ul>
+          <div className="bg-indigo-900/30 p-4 rounded-lg">
+            <h3 className="text-indigo-400 font-semibold mb-2">Анализ пути пользователя</h3>
+            <p className="text-slate-300">
+              Исследуйте каждый шаг пользователя при создании задачи, выявите проблемные места
+              и предложите улучшения для оптимизации процесса.
+            </p>
           </div>
         </div>
       </div>
-
-      <MentorTip
-        content={
-          <div>
-            <h3 className="text-lg font-bold mb-2">Ментор</h3>
-            <p>Начните с анализа имеющихся данных. Обратите внимание на разницу в метриках между desktop и mobile версиями.</p>
-          </div>
-        }
-        position="right"
-      />
-    </div>,
-
-    // Шаг 2: Выявление проблем
-    <div key="problem-identification" className={styles.section}>
-      <h2 className={styles.subheader}>Выявление проблем</h2>
       
-      <p className="text-slate-300 mb-4">
-        На основе данных и отзывов, выберите ключевые проблемы UX:
-      </p>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-        {[
-          {
-            id: "complex_form",
-            title: "Сложная форма",
-            description: "Много обязательных полей, сложная структура",
-            impact: "Высокий процент отказов"
-          },
-          {
-            id: "mobile_ux",
-            title: "Проблемы на мобильных",
-            description: "Низкая конверсия, неудобный интерфейс",
-            impact: "32% конверсия vs 58% на desktop"
-          },
-          {
-            id: "time_consuming",
-            title: "Длительный процесс",
-            description: "Среднее время создания задачи > 3 минут",
-            impact: "Потеря пользователей"
-          },
-          {
-            id: "unclear_fields",
-            title: "Непонятные поля",
-            description: "Пользователи не понимают назначение полей",
-            impact: "Ошибки при заполнении"
-          }
-        ].map(problem => (
-          <div
-            key={problem.id}
-            className={`bg-slate-800 p-4 rounded-lg border-2 cursor-pointer transition-all ${
-              selectedProblems.includes(problem.id)
-                ? 'border-indigo-500 bg-indigo-900/30'
-                : 'border-slate-700 hover:border-slate-500'
-            }`}
-            onClick={() => handleProblemSelect(problem.id)}
-          >
-            <h3 className="text-lg font-semibold text-white mb-2">{problem.title}</h3>
-            <p className="text-slate-300 mb-2">{problem.description}</p>
-            <p className="text-indigo-400 text-sm">Влияние: {problem.impact}</p>
-          </div>
-        ))}
-      </div>
-
       <MentorTip
-        content={
-          <div>
-            <h3 className="text-lg font-bold mb-2">Ментор</h3>
-            <p>Приоритизируйте проблемы на основе их влияния на пользователей и бизнес-метрики.</p>
-          </div>
-        }
-        position="left"
+        tip="В этом задании важно не только выявить проблемы, но и предложить конкретные решения, основанные на принципах UX-дизайна, которые вы изучили в теоретической части."
+        position="bottom-right"
       />
     </div>,
-
-    // Шаг 3: Анализ пользовательского пути
+    
+    // Шаг 2: Анализ пользовательских сегментов
+    <div key="user-segments" className={styles.section}>
+      {renderUserSegments()}
+    </div>,
+    
+    // Шаг 3: Анализ пути пользователя
     <div key="user-journey" className={styles.section}>
-      <h2 className={styles.subheader}>Анализ пользовательского пути</h2>
+      {renderUserJourney()}
+    </div>,
+    
+    // Шаг 4: Заключение и рекомендации
+    <div key="conclusion" className={styles.section}>
+      <h2 className={styles.subheader}>Заключение и рекомендации</h2>
       
-      <div className="bg-slate-800/50 p-6 rounded-lg border border-slate-700 mb-6">
-        <h3 className="text-xl font-semibold text-indigo-400 mb-4">Текущий процесс создания задачи</h3>
+      <div className="bg-slate-800/50 p-6 rounded-lg border border-slate-700 mb-8">
+        <p className={styles.text}>
+          Поздравляем с завершением практического задания по UX-анализу! 
+          Вы проанализировали различные аспекты пользовательского опыта и предложили решения 
+          для улучшения процесса создания задач в TaskMaster.
+        </p>
         
-        <div className="space-y-4">
-          {[
-            {
-              step: 1,
-              title: "Начало",
-              action: "Нажатие кнопки 'Новая задача'",
-              metrics: "Конверсия: 95%",
-              problems: "Кнопка не всегда заметна на мобильных"
-            },
-            {
-              step: 2,
-              title: "Основные поля",
-              action: "Заполнение обязательных полей",
-              metrics: "Конверсия: 70%",
-              problems: "Слишком много обязательных полей"
-            },
-            {
-              step: 3,
-              title: "Дополнительные поля",
-              action: "Заполнение дополнительной информации",
-              metrics: "Конверсия: 45%",
-              problems: "Пользователи не понимают необходимость полей"
-            },
-            {
-              step: 4,
-              title: "Завершение",
-              action: "Сохранение задачи",
-              metrics: "Конверсия: 85%",
-              problems: "Длительное время загрузки на мобильных"
-            }
-          ].map(step => (
-            <div key={step.step} className="flex items-start space-x-4">
-              <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center flex-shrink-0">
-                <span className="text-white font-semibold">{step.step}</span>
-              </div>
-              <div className="flex-grow">
-                <h4 className="text-white font-semibold">{step.title}</h4>
-                <p className="text-slate-300">{step.action}</p>
-                <p className="text-indigo-400 text-sm">{step.metrics}</p>
-                <p className="text-red-400 text-sm">{step.problems}</p>
-              </div>
-            </div>
-          ))}
+        <div className="mt-6">
+          <h3 className="text-indigo-400 font-semibold mb-4">Ключевые выводы:</h3>
+          <ul className="list-disc list-inside text-slate-300 space-y-2">
+            <li>Разные сегменты пользователей имеют специфические потребности и сталкиваются с разными проблемами</li>
+            <li>Каждый шаг в пути пользователя может быть оптимизирован для повышения эффективности</li>
+            <li>Баланс между простотой для новичков и функциональностью для опытных пользователей критически важен</li>
+            <li>Мобильный опыт требует особого внимания и адаптации интерфейса</li>
+          </ul>
         </div>
       </div>
-
-      <div className="mb-6">
-        <h3 className="text-lg font-semibold text-white mb-2">Ваши заметки:</h3>
-        <textarea
-          className="w-full bg-slate-800 text-white p-4 rounded border border-slate-600 min-h-32"
-          placeholder="Запишите ваши наблюдения и идеи по улучшению пользовательского пути..."
-          value={userNotes}
-          onChange={(e) => setUserNotes(e.target.value)}
-        />
-      </div>
-
-      <MentorTip
-        content={
-          <div>
-            <h3 className="text-lg font-bold mb-2">Ментор</h3>
-            <p>Обратите внимание на точки наибольшего оттока пользователей. Что может быть причиной такой высокой потери на этапе дополнительных полей?</p>
-          </div>
-        }
-        position="right"
-      />
-    </div>,
-
-    // Шаг 4: Выбор решения
-    <div key="solution" className={styles.section}>
-      <h2 className={styles.subheader}>Выбор решения</h2>
       
-      <p className="text-slate-300 mb-4">
-        На основе проведенного анализа, выберите наиболее эффективное решение:
-      </p>
-
-      <div className="space-y-4">
-        {[
-          {
-            id: "progressive_disclosure",
-            title: "Прогрессивное раскрытие",
-            description: "Показывать дополнительные поля только при необходимости",
-            benefits: ["Упрощение начального взаимодействия", "Снижение когнитивной нагрузки"],
-            impact: "Ожидаемое улучшение конверсии на 25%"
-          },
-          {
-            id: "mobile_first",
-            title: "Mobile-First редизайн",
-            description: "Полный редизайн с фокусом на мобильный опыт",
-            benefits: ["Оптимизация под мобильные устройства", "Улучшение навигации"],
-            impact: "Ожидаемое улучшение мобильной конверсии на 40%"
-          },
-          {
-            id: "quick_add",
-            title: "Быстрое добавление",
-            description: "Отдельный режим для быстрого создания простых задач",
-            benefits: ["Ускорение процесса", "Удобство для базовых задач"],
-            impact: "Сокращение времени создания на 60%"
-          }
-        ].map(solution => (
-          <div
-            key={solution.id}
-            className={`bg-slate-800 p-6 rounded-lg border-2 cursor-pointer transition-all ${
-              selectedSolution === solution.id
-                ? 'border-indigo-500 bg-indigo-900/30'
-                : 'border-slate-700 hover:border-slate-500'
-            }`}
-            onClick={() => handleSolutionSelect(solution.id)}
-          >
-            <h3 className="text-xl font-semibold text-white mb-2">{solution.title}</h3>
-            <p className="text-slate-300 mb-4">{solution.description}</p>
-            <div className="space-y-2">
-              <h4 className="text-indigo-400 font-semibold">Преимущества:</h4>
-              <ul className="list-disc list-inside text-slate-300">
-                {solution.benefits.map(benefit => (
-                  <li key={benefit}>{benefit}</li>
-                ))}
-              </ul>
-              <p className="text-green-400 mt-2">{solution.impact}</p>
-            </div>
-          </div>
-        ))}
-      </div>
-
       <MentorTip
-        content={
-          <div>
-            <h3 className="text-lg font-bold mb-2">Ментор</h3>
-            <p>Оцените каждое решение с точки зрения баланса между улучшением UX и сложностью реализации.</p>
-          </div>
-        }
-        position="bottom"
-      />
-    </div>,
-
-    // Шаг 5: План улучшений
-    <div key="improvement-plan" className={styles.section}>
-      <h2 className={styles.subheader}>План улучшений</h2>
-      
-      <p className="text-slate-300 mb-4">
-        Составьте план реализации выбранного решения, отметив необходимые шаги:
-      </p>
-
-      <div className="space-y-4">
-        {[
-          {
-            id: "research",
-            title: "Дополнительные исследования",
-            tasks: ["Провести юзабилити-тестирование прототипа", "Собрать обратную связь от пользователей"]
-          },
-          {
-            id: "design",
-            title: "Дизайн и прототипирование",
-            tasks: ["Создать прототип нового интерфейса", "Протестировать на разных устройствах"]
-          },
-          {
-            id: "development",
-            title: "Разработка",
-            tasks: ["Реализовать новый интерфейс", "Внедрить систему аналитики"]
-          },
-          {
-            id: "testing",
-            title: "Тестирование и запуск",
-            tasks: ["Провести A/B тестирование", "Собрать метрики использования"]
-          }
-        ].map(phase => (
-          <div key={phase.id} className="bg-slate-800 p-4 rounded-lg">
-            <h3 className="text-lg font-semibold text-white mb-2">{phase.title}</h3>
-            <div className="space-y-2">
-              {phase.tasks.map(task => (
-                <label key={task} className="flex items-center space-x-3 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    className="form-checkbox h-5 w-5 text-indigo-500"
-                    checked={improvementPlan[task] || false}
-                    onChange={() => handleImprovementToggle(task)}
-                  />
-                  <span className="text-slate-300">{task}</span>
-                </label>
-              ))}
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <MentorTip
-        content={
-          <div>
-            <h3 className="text-lg font-bold mb-2">Ментор</h3>
-            <p>Хороший план улучшений должен включать как быстрые победы, так и долгосрочные улучшения. Не забудьте про метрики успеха!</p>
-          </div>
-        }
-        position="bottom"
+        tip="Помните, что UX-анализ — это непрерывный процесс. Продолжайте собирать обратную связь, тестировать решения и итеративно улучшать пользовательский опыт."
+        position="bottom-right"
       />
     </div>
   ];
@@ -750,9 +514,13 @@ const UXAnalysisPractice: React.FC<UXAnalysisPracticeProps> = ({ onComplete }) =
   return (
     <div className={styles.container}>
       <StepNavigation
-        steps={steps}
+        steps={stepsContent}
         onComplete={onComplete}
-        completeButtonText="Завершить практику"
+        showBackButton={true}
+        continueButtonText="Далее"
+        completeButtonText="Завершить"
+        showProgress={true}
+        showStepNumbers={true}
       />
     </div>
   );

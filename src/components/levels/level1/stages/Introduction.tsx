@@ -1,15 +1,13 @@
 import React from 'react';
 import { useRouter } from 'next/router';
 import { styles } from '../common/styles';
-import { LevelStage, getNextStage } from '../common/LevelStages';
-import MentorTip from '../../../../components/common/MentorTip';
+import { LevelStage } from '../../../../types/level';
+import MentorTip from '../../../common/MentorTip';
 
 const Introduction: React.FC = () => {
   const router = useRouter();
-  
   const handleContinue = () => {
-    const nextStage = getNextStage(LevelStage.INTRODUCTION);
-    router.push(`/level1?stage=${nextStage}`);
+    router.push('/level1');
   };
   
   return (
@@ -80,13 +78,9 @@ const Introduction: React.FC = () => {
           Уровень состоит из следующих этапов:
         </p>
         <ul className={styles.list}>
-          <li><strong>Встреча с командой</strong> — познакомьтесь с командой и узнайте их видение проблемы</li>
-          <li><strong>Анализ метрик</strong> — изучите ключевые метрики и выявите проблемные места</li>
-          <li><strong>UX-анализ</strong> — проанализируйте текущий интерфейс и выявите болевые точки</li>
-          <li><strong>Исследование пользователей</strong> — изучите отзывы и проведите интервью с пользователями</li>
-          <li><strong>Проектирование решения</strong> — разработайте и обоснуйте свое решение</li>
-          <li><strong>План внедрения</strong> — составьте план реализации и тестирования решения</li>
-          <li><strong>Итоговый тест</strong> — проверьте свои знания и навыки</li>
+          <li><strong>Принятие решений: теория</strong> — изучите основные принципы и фреймворки</li>
+          <li><strong>Принятие решений: практика</strong> — примените знания на реальном кейсе</li>
+          <li><strong>Финальный тест</strong> — проверьте свои знания</li>
         </ul>
       </section>
       

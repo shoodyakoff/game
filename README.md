@@ -1,6 +1,6 @@
-# Game Portal
+# GotoGrow
 
-Игровой портал с авторизацией, выбором персонажа и игровыми механиками.
+Образовательная платформа для обучения продуктовому мышлению и UX анализу.
 
 ## Настройка окружения
 
@@ -8,8 +8,8 @@
 
 1. **Клонирование репозитория:**
    ```bash
-   git clone https://github.com/username/game.git
-   cd game
+   git clone https://github.com/username/gotogrow.git
+   cd gotogrow
    ```
 
 2. **Создание файлов окружения:**
@@ -173,7 +173,7 @@ mv deploy/.env.production deploy/.env
 module.exports = {
   apps: [
     {
-      name: 'game-portal',
+      name: 'gotogrow',
       script: 'node_modules/next/dist/bin/next',
       args: 'start',
       instances: 1,
@@ -252,7 +252,7 @@ pm2 status
 
 2. Проверьте журналы приложения:
 ```bash
-pm2 logs game-portal
+pm2 logs gotogrow
 ```
 
 3. Откройте ваш сайт в браузере и убедитесь, что он работает корректно:
@@ -262,10 +262,10 @@ https://your-domain.ru
 
 ## Обслуживание приложения
 
-- Для перезапуска приложения: `pm2 restart game-portal`
-- Для остановки приложения: `pm2 stop game-portal`
-- Для запуска приложения: `pm2 start game-portal`
-- Для просмотра логов: `pm2 logs game-portal`
+- Для перезапуска приложения: `pm2 restart gotogrow`
+- Для остановки приложения: `pm2 stop gotogrow`
+- Для запуска приложения: `pm2 start gotogrow`
+- Для просмотра логов: `pm2 logs gotogrow`
 
 ## Безопасность
 
@@ -284,7 +284,7 @@ https://your-domain.ru
 ## Решение проблем
 
 Если приложение не работает:
-1. Проверьте логи приложения: `pm2 logs game-portal`
+1. Проверьте логи приложения: `pm2 logs gotogrow`
 2. Проверьте логи Nginx: `sudo tail -f /var/log/nginx/error.log`
 3. Проверьте статус Nginx: `systemctl status nginx`
 4. Убедитесь, что порт 3000 прослушивается: `netstat -tulpn | grep 3000`

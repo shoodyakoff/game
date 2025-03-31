@@ -47,14 +47,97 @@
 ## Сохранение игрового прогресса
 
 ### Текущая реализация
-- Сохранение игрового прогресса описано в документации (`docs/prd/features/progress_saving.md`), но реальное хранение данных не реализовано
-- В спецификации указана необходимость синхронизации между устройствами, но в текущей реализации это не предусмотрено
+- Данные о прогрессе уровней сохраняются в localStorage браузера
+- Информация о выбранном персонаже хранится в Redux store и дублируется в localStorage
+- В Redux store используется characterSlice с функциями для управления выбором персонажа
+- Прогресс по уровням хранится в localStorage в ключах вида `level1_progress`, `level2_progress`
+- Список завершенных уровней хранится в localStorage в ключе `completedLevels`
+- Достижения и награды временно хранятся в компонентах и теряются при перезагрузке страницы
+
+### Недостатки текущего подхода
+- Данные привязаны к конкретному устройству и браузеру
+- Отсутствие синхронизации между устройствами
+- Ограниченный объем хранения в localStorage
+- Отсутствие возможности аналитики и мониторинга прогресса
+- Риск потери данных при очистке кэша браузера
 
 ### Требуемая реализация
-- Создание серверной части для хранения состояния игры
+- Создание серверной части с MongoDB для хранения всех пользовательских данных:
+  - Таблица пользователей (Users)
+  - Таблица персонажей (Characters)
+  - Таблица прогресса (Progress)
+  - Таблица достижений (Achievements)
+  - Таблица наград (Rewards)
 - API для сохранения и восстановления прогресса
 - Механизм синхронизации между устройствами
 - Возможность сохранения прогресса в оффлайн-режиме с последующей синхронизацией
+- Сохранение истории действий пользователя для аналитики
+
+### Примерная структура данных в MongoDB
+
+#### Коллекция Progress:
+```json
+{
+  "_id": "ObjectId",
+  "userId": "ObjectId",
+  "characterId": "ObjectId",
+  "levelProgress": [
+    {
+      "levelId": "Number",
+      "currentStage": "String",
+      "completedStages": ["String"],
+      "notes": ["String"],
+      "testScore": "Number",
+      "timeSpent": "Number",
+      "lastUpdated": "Date"
+    }
+  ],
+  "completedLevels": ["Number"],
+  "createdAt": "Date",
+  "updatedAt": "Date"
+}
+```
+
+#### Коллекция Achievements:
+```json
+{
+  "_id": "ObjectId",
+  "userId": "ObjectId",
+  "achievements": [
+    {
+      "id": "String",
+      "title": "String",
+      "description": "String",
+      "icon": "String",
+      "obtainedAt": "Date"
+    }
+  ],
+  "createdAt": "Date",
+  "updatedAt": "Date"
+}
+```
+
+#### Коллекция Rewards:
+```json
+{
+  "_id": "ObjectId",
+  "userId": "ObjectId",
+  "characterId": "ObjectId",
+  "items": [
+    {
+      "id": "String",
+      "title": "String",
+      "description": "String",
+      "icon": "String",
+      "type": "String",
+      "obtainedAt": "Date",
+      "isEquipped": "Boolean"
+    }
+  ],
+  "createdAt": "Date",
+  "updatedAt": "Date"
+}
+```
 
 ## Техническая инфраструктура для масштабирования
 

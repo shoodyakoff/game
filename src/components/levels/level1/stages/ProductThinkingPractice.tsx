@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { styles } from '../common/styles';
-import StepNavigation from '../../StepNavigation';
-import MentorTip from '../../MentorTip';
+import StepNavigation from '../../shared/navigation/StepNavigation';
+import MentorTip from '../../shared/feedback/MentorTip';
 
 interface ProductThinkingPracticeProps {
   onComplete: () => void;

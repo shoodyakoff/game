@@ -1,0 +1,87 @@
+.item {
+  display: flex;
+  align-items: center;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  margin-bottom: 1rem;
+  transition: all 0.3s ease;
+  border: 2px solid transparent;
+}
+
+.item.equipped {
+  border-color: #4CAF50;
+  background: rgba(76, 175, 80, 0.1);
+}
+
+.icon {
+  font-size: 2rem;
+  margin-right: 1rem;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 50%;
+}
+
+.info {
+  flex: 1;
+}
+
+.title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #fff;
+  margin: 0 0 0.25rem;
+}
+
+.description {
+  font-size: 0.875rem;
+  color: #b4b7c9;
+  margin: 0;
+}
+
+.equipButton {
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  border: none;
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.equipButton:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.equipButton.equipped {
+  background: #4CAF50;
+}
+
+.equipButton.equipped:hover {
+  background: #388E3C;
+}
+
+@media (max-width: 768px) {
+  .item {
+    flex-direction: column;
+    text-align: center;
+    padding: 0.75rem;
+  }
+
+  .icon {
+    margin: 0 0 0.5rem;
+  }
+
+  .info {
+    margin-bottom: 0.5rem;
+  }
+
+  .equipButton {
+    width: 100%;
+  }
+} 

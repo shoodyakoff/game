@@ -1,6 +1,6 @@
 import React from 'react';
 import { useRouter } from 'next/router';
-import { LevelStage, stageNames, stageOrder, getStageProgress } from './LevelStages';
+import { LevelStage, LEVEL_STAGE_SEQUENCE as stageOrder, getStageName } from '../../shared/LevelStages';
 import { styles } from './styles';
 
 interface StageNavigationProps {
@@ -10,6 +10,15 @@ interface StageNavigationProps {
   showBackButton?: boolean;
   goToPreviousStage?: () => void;
 }
+
+// Функция для получения имени этапа
+const stageNames = (stage: LevelStage): string => getStageName(stage);
+
+// Функция для расчета прогресса прохождения этапа
+const getStageProgress = (currentStage: LevelStage): number => {
+  const currentIndex = stageOrder.indexOf(currentStage);
+  return Math.round((currentIndex / (stageOrder.length - 1)) * 100);
+};
 
 const StageNavigation: React.FC<StageNavigationProps> = ({ 
   currentStage, 
@@ -54,7 +63,7 @@ const StageNavigation: React.FC<StageNavigationProps> = ({
   return (
     <div className={styles.stageNavigation}>
       <div className={styles.stageInfo}>
-        <h3 className={styles.stageName}>{stageNames[currentStage]}</h3>
+        <h3 className={styles.stageName}>{stageNames(currentStage)}</h3>
         <span className={styles.stageCount}>
           Этап {currentStageIndex + 1} из {stageOrder.length}
         </span>

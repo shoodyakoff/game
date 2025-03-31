@@ -2,12 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { styles } from './common/styles';
 import StageNavigation from './common/StageNavigation';
-import { LevelStage, LEVEL_STAGE_SEQUENCE, getNextStage, getPreviousStage, getStageName } from './common/LevelStages';
+import { LevelStage, LEVEL_STAGE_SEQUENCE, getNextStage, getPreviousStage, getStageName } from '../shared/LevelStages';
 
 // Импорт компонентов для разных этапов
 import ProductMindsetTheory from './stages/ProductMindsetTheory';
 import UXAnalysisTheory from './stages/UXAnalysisTheory';
 import UXAnalysisPractice from './stages/UXAnalysisPractice';
+import MetricsTheory from './stages/MetricsTheory';
+import MetricsPractice from './stages/MetricsPractice';
 
 // Временные заглушки для остальных этапов
 const Introduction = ({ onComplete }) => (
@@ -22,22 +24,6 @@ const TeamMeeting = ({ onComplete }) => (
   <div className={styles.container}>
     <h1 className={styles.header}>Встреча с командой</h1>
     <p className={styles.text}>Познакомьтесь с командой и узнайте детали задачи.</p>
-    <button onClick={onComplete}>Начать</button>
-  </div>
-);
-
-const MetricsTheory = ({ onComplete }) => (
-  <div className={styles.container}>
-    <h1 className={styles.header}>Теория метрик</h1>
-    <p className={styles.text}>Изучите основы анализа продуктовых метрик.</p>
-    <button onClick={onComplete}>Начать</button>
-  </div>
-);
-
-const MetricsPractice = ({ onComplete }) => (
-  <div className={styles.container}>
-    <h1 className={styles.header}>Практика по метрикам</h1>
-    <p className={styles.text}>Примените знания о метриках на практике.</p>
     <button onClick={onComplete}>Начать</button>
   </div>
 );
@@ -149,7 +135,7 @@ const Level1 = () => {
         return <Feedback onComplete={handleNextStage} />;
       case LevelStage.QUIZ:
         return <Quiz onComplete={handleNextStage} />;
-      case LevelStage.COMPLETION:
+      case LevelStage.COMPLETE:
         return <Completion onComplete={handleNextStage} />;
       default:
         return <Introduction onComplete={handleNextStage} />;
@@ -180,7 +166,7 @@ const Level1 = () => {
           </button>
         )}
         
-        {currentStage !== LevelStage.COMPLETION && (
+        {currentStage !== LevelStage.COMPLETE && (
           <button 
             className={styles.navigationButton} 
             onClick={handleNextStage}
@@ -189,7 +175,7 @@ const Level1 = () => {
           </button>
         )}
         
-        {currentStage === LevelStage.COMPLETION && (
+        {currentStage === LevelStage.COMPLETE && (
           <button 
             className={styles.navigationButton} 
             onClick={() => router.push('/pages/levels')}

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { styles } from '../common/styles';
+import MentorTip from '../../shared/feedback/MentorTip';
 
 interface Question {
   id: number;
@@ -9,7 +10,11 @@ interface Question {
   explanation: string;
 }
 
-const Quiz = () => {
+interface QuizProps {
+  onComplete: () => void;
+}
+
+const Quiz: React.FC<QuizProps> = ({ onComplete }) => {
   const questions: Question[] = [
     {
       id: 1,
@@ -191,21 +196,40 @@ const Quiz = () => {
     setShowExplanations({});
   };
 
+  const handleComplete = () => {
+    const percentage = calculateScore();
+    if (percentage >= 70) {
+      onComplete();
+    } else {
+      alert('Необходимо набрать минимум 70% для завершения теста');
+    }
+  };
+
   return (
     <div className={styles.container}>
-      <h1 className={styles.header}>Тестирование знаний</h1>
+      <h1 className={styles.header}>Финальный тест</h1>
       
       <section className={styles.section}>
-        <div className="bg-slate-700 p-4 rounded-lg border border-slate-600 mb-6">
-          <p className={styles.text}>Этот тест проверит ваши знания по основным темам уровня:</p>
+        <div className="bg-slate-800/50 p-6 rounded-lg border border-slate-700 mb-8">
+          <h2 className={styles.subheader}>Проверка знаний по темам уровня</h2>
+          <p className={styles.text}>
+            Этот тест проверит ваши знания по основным темам уровня:
+          </p>
           <ul className={styles.list}>
             <li>Продуктовое мышление</li>
             <li>UX-анализ</li>
             <li>Работа с метриками</li>
             <li>Принятие решений</li>
           </ul>
-          <p className={styles.text}>Выберите один правильный ответ для каждого вопроса и нажмите "Проверить результаты" после завершения теста.</p>
+          <p className={styles.text}>
+            Для успешного прохождения теста необходимо набрать не менее 70% от максимального количества баллов.
+          </p>
         </div>
+        
+        <MentorTip
+          tip="Не торопитесь и внимательно читайте вопросы. Используйте знания, полученные в ходе прохождения уровня, и опирайтесь на логику при выборе ответов."
+          position="bottom-right"
+        />
         
         <div className="space-y-8 mb-8">
           {questions.map(question => (
@@ -284,12 +308,23 @@ const Quiz = () => {
             </h2>
             <p className="text-slate-300 mb-4">{getFeedback()}</p>
             
-            <button
-              className={styles.btnSecondary}
-              onClick={resetQuiz}
-            >
-              Пройти тест заново
-            </button>
+            <div className="flex justify-between mt-6">
+              <button
+                className={styles.btnSecondary}
+                onClick={resetQuiz}
+              >
+                Пройти тест заново
+              </button>
+              
+              {calculateScore() >= 70 && (
+                <button
+                  className={styles.btnPrimary}
+                  onClick={handleComplete}
+                >
+                  Завершить уровень
+                </button>
+              )}
+            </div>
           </div>
         )}
       </section>

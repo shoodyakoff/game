@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/router';
 import { styles } from '../common/styles';
-import { LevelStage, getNextStage } from '../common/LevelStages';
+import { LevelStage, getNextStage } from '../../shared/LevelStages';
 
 const Feedback = () => {
   const router = useRouter();

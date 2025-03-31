@@ -1,8 +1,8 @@
 import React from 'react';
-import MentorTip from '../../../levels/MentorTip';
+import MentorTip from '../../shared/feedback/MentorTip';
 import styles from '../common/styles';
 import StageNavigation from '../common/StageNavigation';
-import LevelStage from '../common/LevelStages';
+import { LevelStage } from '../../../../types/level';
 
 interface RequirementsTheoryProps {
   goToPreviousStage: () => void;

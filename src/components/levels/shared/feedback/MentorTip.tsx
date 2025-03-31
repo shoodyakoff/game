@@ -1,41 +1,60 @@
-import { useState, useEffect, useRef } from 'react';
+import React, { useState, useRef, useEffect, ReactNode } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
 
-type MentorTipProps = {
-  tip: string;
+export interface MentorTipProps {
+  tip?: string;
+  content?: ReactNode;  // Поддерживаем также старый API с content
   avatar?: string;
   name?: string;
   showIcon?: boolean;
-  position?: 'top-right' | 'bottom-right' | 'bottom-left' | 'top-left' | 'right-bottom';
+  position?: 'top-right' | 'bottom-right' | 'bottom-left' | 'top-left' | 'right-bottom' | 'left';
   defaultOpen?: boolean;
-};
+  autoCloseDelay?: number;
+  showHoverHint?: boolean;
+  className?: string;
+  iconPosition?: 'fixed' | 'absolute' | 'relative'; // Поддержка старого API
+}
 
 const MentorTip: React.FC<MentorTipProps> = ({
   tip,
+  content, // Поддержка старого API
   avatar = '/characters/avatar_mentor.png',
   name = 'Ментор',
   showIcon = true,
   position = 'right-bottom',
-  defaultOpen = false
+  defaultOpen = false,
+  autoCloseDelay = 10000,
+  showHoverHint = true,
+  className = '',
+  iconPosition = 'relative' // Поддержка старого API
 }) => {
+  // Для обратной совместимости используем content, если tip не указан
+  const displayContent = tip || content;
+  
+  // Преобразуем устаревшие значения position
+  let normalizedPosition = position;
+  if (position === 'left') {
+    normalizedPosition = 'top-left';
+  }
+
   const [isOpen, setIsOpen] = useState(defaultOpen);
   const [tooltipPosition, setTooltipPosition] = useState({ top: 0, left: 0 });
   const [hasBeenOpened, setHasBeenOpened] = useState(defaultOpen);
   const iconRef = useRef<HTMLDivElement>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
   
-  // Автоматически закрываем подсказку через 10 секунд, если она открыта по умолчанию
+  // Автоматически закрываем подсказку через указанное время, если она открыта по умолчанию
   useEffect(() => {
     if (defaultOpen) {
       setHasBeenOpened(true);
       const timer = setTimeout(() => {
         setIsOpen(false);
-      }, 10000);
+      }, autoCloseDelay);
       
       return () => clearTimeout(timer);
     }
-  }, [defaultOpen]);
+  }, [defaultOpen, autoCloseDelay]);
 
   // Вычисление позиции подсказки относительно иконки при открытии
   useEffect(() => {
@@ -84,7 +103,8 @@ const MentorTip: React.FC<MentorTipProps> = ({
     'bottom-right': 'top-full right-0 mt-2',
     'bottom-left': 'top-full left-0 mt-2',
     'top-left': 'bottom-full left-0 mb-2',
-    'right-bottom': '' // Пустой, так как используем кастомное позиционирование
+    'right-bottom': '', // Пустой, так как используем кастомное позиционирование
+    'left': 'bottom-full left-0 mb-2' // Для обратной совместимости
   };
 
   const handleClick = () => {
@@ -93,7 +113,7 @@ const MentorTip: React.FC<MentorTipProps> = ({
   };
   
   return (
-    <div className="relative inline-block">
+    <div className={`relative inline-block ${className}`}>
       {/* Иконка наставника */}
       <motion.div
         ref={iconRef}
@@ -125,9 +145,11 @@ const MentorTip: React.FC<MentorTipProps> = ({
         )}
         
         {/* Текстовая подсказка при наведении */}
-        <div className="absolute opacity-0 group-hover:opacity-100 -top-8 left-1/2 transform -translate-x-1/2 bg-indigo-950/90 text-white text-xs py-1 px-2 rounded whitespace-nowrap transition-opacity duration-200">
-          Нажмите для подсказки ментора
-        </div>
+        {showHoverHint && (
+          <div className="absolute opacity-0 group-hover:opacity-100 -top-8 left-1/2 transform -translate-x-1/2 bg-indigo-950/90 text-white text-xs py-1 px-2 rounded whitespace-nowrap transition-opacity duration-200">
+            Нажмите для подсказки ментора
+          </div>
+        )}
       </motion.div>
       
       {/* Всплывающая подсказка с анимацией */}
@@ -153,7 +175,9 @@ const MentorTip: React.FC<MentorTipProps> = ({
               </div>
               <div className="flex-1">
                 <h4 className="font-bold text-yellow-500 mb-1">{name}</h4>
-                <p className="text-slate-100 text-sm leading-relaxed">{tip}</p>
+                <div className="text-slate-100 text-sm leading-relaxed">
+                  {displayContent}
+                </div>
               </div>
               <button 
                 onClick={() => setIsOpen(false)}

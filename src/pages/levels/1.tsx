@@ -11,14 +11,15 @@ import ProtectedRoute from '../../components/auth/ProtectedRoute';
 import DialogBubble from '../../components/levels/DialogBubble';
 import AnalysisMaterial from '../../components/levels/AnalysisMaterial';
 import DecisionSelector from '../../components/levels/DecisionSelector';
-import QuizComponent, { QuizQuestion } from '../../components/levels/QuizComponent';
+import { Quiz, QuizQuestion } from '../../components/levels/shared/quiz';
 import { RootState } from '../../store';
 import { selectSelectedCharacter } from '../../store/slices/characterSlice';
 import ProgressIndicator from '../../components/levels/ProgressIndicator';
 import NotesSystem from '../../components/levels/NotesSystem';
-import MentorTip from '../../components/levels/MentorTip';
-import StepNavigation from '../../components/levels/StepNavigation';
-import LevelNavigation from '../../components/levels/LevelNavigation';
+import { MentorTip } from '../../components/levels/shared/feedback';
+import { StepNavigation } from '../../components/levels/shared/navigation';
+import { LevelNavigation } from '../../components/levels/shared/navigation';
+import { Completion } from '../../components/levels/level1/stages/Completion';
 
 // Импорты компонентов стадий из правильных путей
 import ProductMindsetTheory from '../../components/levels/level1/stages/ProductMindsetTheory';
@@ -35,13 +36,13 @@ import DecisionMakingPractice from '../../components/levels/level1/stages/Decisi
 import { styles as componentStyles } from '../../components/levels/level1/common/styles';
 
 // Этапы уровня
-const STAGE_ORDER: LevelStage[] = [
-  'intro',
-  'product-thinking-theory',
-  'product-thinking-practice',
-  'ux-analysis-theory',
-  'ux-analysis-practice',
-  'quiz'
+const STAGE_ORDER = [
+  LevelStage.INTRO,
+  LevelStage.PRODUCT_THINKING_THEORY,
+  LevelStage.PRODUCT_THINKING_PRACTICE,
+  LevelStage.UX_ANALYSIS_THEORY,
+  LevelStage.UX_ANALYSIS_PRACTICE,
+  LevelStage.QUIZ
 ];
 
 // Добавим моковые данные для этапа анализа
@@ -160,7 +161,7 @@ const Level1: NextPage = () => {
   const router = useRouter();
   const selectedCharacter = useSelector(selectSelectedCharacter);
   const [isClient, setIsClient] = useState(false);
-  const [currentStage, setCurrentStage] = useState<LevelStage>('intro');
+  const [currentStage, setCurrentStage] = useState<LevelStage>(LevelStage.INTRO);
   const [progress, setProgress] = useState<LevelStage[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [levelData, setLevelData] = useState<any>(null);
@@ -204,7 +205,7 @@ const Level1: NextPage = () => {
           try {
             const parsedProgress = JSON.parse(savedProgress);
             setProgress(parsedProgress.progress || []);
-            setCurrentStage(parsedProgress.currentStage || 'intro');
+            setCurrentStage(parsedProgress.currentStage || LevelStage.INTRO);
             setCompletedStages(parsedProgress.completedStages || []);
           } catch (error) {
             console.error('Ошибка при загрузке прогресса:', error);
@@ -235,7 +236,7 @@ const Level1: NextPage = () => {
   
   // Вспомогательный метод для загрузки аналитических данных
   const loadAnalysisData = async () => {
-    if (currentStage === 'ux-analysis-practice' && !analysisData) {
+    if (currentStage === LevelStage.UX_ANALYSIS_PRACTICE && !analysisData) {
       try {
         // В реальном приложении здесь будет API запрос
         // const response = await axios.get('/api/levels/1/analysis-data');
@@ -254,34 +255,34 @@ const Level1: NextPage = () => {
   // Метод для перехода на следующую стадию
   const getNextStage = (currentStage: LevelStage): LevelStage => {
     switch (currentStage) {
-      case 'intro':
-        return 'product-thinking-theory';
+      case LevelStage.INTRO:
+        return LevelStage.PRODUCT_THINKING_THEORY;
         
-      case 'product-thinking-theory':
-        return 'product-thinking-practice';
-      case 'product-thinking-practice':
-        return 'ux-analysis-theory';
+      case LevelStage.PRODUCT_THINKING_THEORY:
+        return LevelStage.PRODUCT_THINKING_PRACTICE;
+      case LevelStage.PRODUCT_THINKING_PRACTICE:
+        return LevelStage.UX_ANALYSIS_THEORY;
         
-      case 'ux-analysis-theory':
-        return 'ux-analysis-practice';
-      case 'ux-analysis-practice':
-        return 'metrics-theory';
+      case LevelStage.UX_ANALYSIS_THEORY:
+        return LevelStage.UX_ANALYSIS_PRACTICE;
+      case LevelStage.UX_ANALYSIS_PRACTICE:
+        return LevelStage.METRICS_THEORY;
         
-      case 'metrics-theory':
-        return 'metrics-practice';
-      case 'metrics-practice':
-        return 'decision-making-theory';
+      case LevelStage.METRICS_THEORY:
+        return LevelStage.METRICS_PRACTICE;
+      case LevelStage.METRICS_PRACTICE:
+        return LevelStage.DECISION_MAKING_THEORY;
         
-      case 'decision-making-theory':
-        return 'decision-making-practice';
-      case 'decision-making-practice':
-        return 'quiz';
+      case LevelStage.DECISION_MAKING_THEORY:
+        return LevelStage.DECISION_MAKING_PRACTICE;
+      case LevelStage.DECISION_MAKING_PRACTICE:
+        return LevelStage.QUIZ;
         
-      case 'quiz':
-        return 'complete';
-      case 'complete':
+      case LevelStage.QUIZ:
+        return LevelStage.COMPLETE;
+      case LevelStage.COMPLETE:
       default:
-        return 'complete';
+        return LevelStage.COMPLETE;
     }
   };
   
@@ -295,28 +296,28 @@ const Level1: NextPage = () => {
   // Функция для определения предыдущей стадии
   const getPreviousStage = (currentStage: LevelStage): LevelStage => {
     switch (currentStage) {
-      case 'product-thinking-theory':
-        return 'intro';
-      case 'product-thinking-practice':
-        return 'product-thinking-theory';
-      case 'ux-analysis-theory':
-        return 'product-thinking-practice';
-      case 'ux-analysis-practice':
-        return 'ux-analysis-theory';
-      case 'metrics-theory':
-        return 'ux-analysis-practice';
-      case 'metrics-practice':
-        return 'metrics-theory';
-      case 'decision-making-theory':
-        return 'metrics-practice';
-      case 'decision-making-practice':
-        return 'decision-making-theory';
-      case 'quiz':
-        return 'decision-making-practice';
-      case 'complete':
-        return 'quiz';
+      case LevelStage.PRODUCT_THINKING_THEORY:
+        return LevelStage.INTRO;
+      case LevelStage.PRODUCT_THINKING_PRACTICE:
+        return LevelStage.PRODUCT_THINKING_THEORY;
+      case LevelStage.UX_ANALYSIS_THEORY:
+        return LevelStage.PRODUCT_THINKING_PRACTICE;
+      case LevelStage.UX_ANALYSIS_PRACTICE:
+        return LevelStage.UX_ANALYSIS_THEORY;
+      case LevelStage.METRICS_THEORY:
+        return LevelStage.UX_ANALYSIS_PRACTICE;
+      case LevelStage.METRICS_PRACTICE:
+        return LevelStage.METRICS_THEORY;
+      case LevelStage.DECISION_MAKING_THEORY:
+        return LevelStage.METRICS_PRACTICE;
+      case LevelStage.DECISION_MAKING_PRACTICE:
+        return LevelStage.DECISION_MAKING_THEORY;
+      case LevelStage.QUIZ:
+        return LevelStage.DECISION_MAKING_PRACTICE;
+      case LevelStage.COMPLETE:
+        return LevelStage.QUIZ;
       default:
-        return 'intro';
+        return LevelStage.INTRO;
     }
   };
 
@@ -332,15 +333,15 @@ const Level1: NextPage = () => {
         
         // Устанавливаем соответствующий прогресс
         switch (stageParam) {
-          case 'product-thinking-theory': saveProgress(stageParam as LevelStage, progress); break;
-          case 'ux-analysis-theory': saveProgress(stageParam as LevelStage, progress); break;
-          case 'metrics-theory': saveProgress(stageParam as LevelStage, progress); break;
-          case 'decision-making-theory': saveProgress(stageParam as LevelStage, progress); break;
-          case 'ux-analysis-practice': saveProgress(stageParam as LevelStage, progress); break;
-          case 'metrics-practice': saveProgress(stageParam as LevelStage, progress); break;
-          case 'decision-making-practice': saveProgress(stageParam as LevelStage, progress); break;
-          case 'quiz': saveProgress(stageParam as LevelStage, progress); break;
-          case 'complete': saveProgress(stageParam as LevelStage, progress); break;
+          case LevelStage.PRODUCT_THINKING_THEORY: saveProgress(stageParam as LevelStage, progress); break;
+          case LevelStage.UX_ANALYSIS_THEORY: saveProgress(stageParam as LevelStage, progress); break;
+          case LevelStage.METRICS_THEORY: saveProgress(stageParam as LevelStage, progress); break;
+          case LevelStage.DECISION_MAKING_THEORY: saveProgress(stageParam as LevelStage, progress); break;
+          case LevelStage.UX_ANALYSIS_PRACTICE: saveProgress(stageParam as LevelStage, progress); break;
+          case LevelStage.METRICS_PRACTICE: saveProgress(stageParam as LevelStage, progress); break;
+          case LevelStage.DECISION_MAKING_PRACTICE: saveProgress(stageParam as LevelStage, progress); break;
+          case LevelStage.QUIZ: saveProgress(stageParam as LevelStage, progress); break;
+          case LevelStage.COMPLETE: saveProgress(stageParam as LevelStage, progress); break;
         }
       }
     }
@@ -428,11 +429,11 @@ const Level1: NextPage = () => {
       }
       
       // Переходим к этапу завершения
-      setCurrentStage('complete');
-      saveProgress('complete', progress);
+      setCurrentStage(LevelStage.COMPLETE);
+      saveProgress(LevelStage.COMPLETE, progress);
       
       // Сохраняем финальный прогресс
-      saveProgress('complete', progress);
+      saveProgress(LevelStage.COMPLETE, progress);
       
       setIsLoading(false);
     } catch (error) {
@@ -448,10 +449,10 @@ const Level1: NextPage = () => {
       window.scrollTo(0, 0);
       
       switch (stage) {
-        case 'intro':
+        case LevelStage.INTRO:
           setCurrentDialogIndex(0);
           break;
-        case 'quiz':
+        case LevelStage.QUIZ:
           setQuizScore(0);
           setQuizAnswers([]);
           break;
@@ -470,21 +471,21 @@ const Level1: NextPage = () => {
   // Функция для проверки выполнения стадии
   const checkStageCompletion = (stage: LevelStage): boolean => {
     switch (stage) {
-      case 'intro':
+      case LevelStage.INTRO:
         return true;  // Введение всегда считается выполненным
-      case 'product-thinking-theory':
-      case 'ux-analysis-theory':
-      case 'metrics-theory':
-      case 'decision-making-theory':
+      case LevelStage.PRODUCT_THINKING_THEORY:
+      case LevelStage.UX_ANALYSIS_THEORY:
+      case LevelStage.METRICS_THEORY:
+      case LevelStage.DECISION_MAKING_THEORY:
         return true;  // Теоретические блоки всегда считаются выполненными
-      case 'product-thinking-practice':
-      case 'ux-analysis-practice':
-      case 'metrics-practice':
-      case 'decision-making-practice':
+      case LevelStage.PRODUCT_THINKING_PRACTICE:
+      case LevelStage.UX_ANALYSIS_PRACTICE:
+      case LevelStage.METRICS_PRACTICE:
+      case LevelStage.DECISION_MAKING_PRACTICE:
         return progress.includes(stage);
-      case 'quiz':
+      case LevelStage.QUIZ:
         return quizScore > 0;
-      case 'complete':
+      case LevelStage.COMPLETE:
         return true;
       default:
         return false;
@@ -511,34 +512,34 @@ const Level1: NextPage = () => {
   
   // Список всех этапов для навигации
   const stagesList = [
-    { stage: 'intro', title: 'Введение', 
-      completed: progress.includes('intro') || completedStages.includes('intro') },
-    { stage: 'product-thinking-theory', title: 'Продуктовое мышление: теория', 
-      completed: progress.includes('product-thinking-theory') || completedStages.includes('product-thinking-theory') },
-    { stage: 'product-thinking-practice', title: 'Продуктовое мышление: практика',
-      completed: progress.includes('product-thinking-practice') || completedStages.includes('product-thinking-practice') },
-    { stage: 'ux-analysis-theory', title: 'UX анализ: теория',
-      completed: progress.includes('ux-analysis-theory') || completedStages.includes('ux-analysis-theory') },
-    { stage: 'ux-analysis-practice', title: 'UX анализ: практика',
-      completed: progress.includes('ux-analysis-practice') || completedStages.includes('ux-analysis-practice') },
-    { stage: 'metrics-theory', title: 'Метрики: теория',
-      completed: progress.includes('metrics-theory') || completedStages.includes('metrics-theory') },
-    { stage: 'metrics-practice', title: 'Метрики: практика',
-      completed: progress.includes('metrics-practice') || completedStages.includes('metrics-practice') },
-    { stage: 'decision-making-theory', title: 'Принятие решений: теория',
-      completed: progress.includes('decision-making-theory') || completedStages.includes('decision-making-theory') },
-    { stage: 'decision-making-practice', title: 'Принятие решений: практика',
-      completed: progress.includes('decision-making-practice') || completedStages.includes('decision-making-practice') },
-    { stage: 'quiz', title: 'Финальный тест',
-      completed: progress.includes('quiz') || completedStages.includes('quiz') },
-    { stage: 'complete', title: 'Завершение',
-      completed: progress.includes('complete') || completedStages.includes('complete') }
+    { stage: LevelStage.INTRO, title: 'Введение', 
+      completed: progress.includes(LevelStage.INTRO) || completedStages.includes(LevelStage.INTRO) },
+    { stage: LevelStage.PRODUCT_THINKING_THEORY, title: 'Продуктовое мышление: теория', 
+      completed: progress.includes(LevelStage.PRODUCT_THINKING_THEORY) || completedStages.includes(LevelStage.PRODUCT_THINKING_THEORY) },
+    { stage: LevelStage.PRODUCT_THINKING_PRACTICE, title: 'Продуктовое мышление: практика',
+      completed: progress.includes(LevelStage.PRODUCT_THINKING_PRACTICE) || completedStages.includes(LevelStage.PRODUCT_THINKING_PRACTICE) },
+    { stage: LevelStage.UX_ANALYSIS_THEORY, title: 'UX анализ: теория',
+      completed: progress.includes(LevelStage.UX_ANALYSIS_THEORY) || completedStages.includes(LevelStage.UX_ANALYSIS_THEORY) },
+    { stage: LevelStage.UX_ANALYSIS_PRACTICE, title: 'UX анализ: практика',
+      completed: progress.includes(LevelStage.UX_ANALYSIS_PRACTICE) || completedStages.includes(LevelStage.UX_ANALYSIS_PRACTICE) },
+    { stage: LevelStage.METRICS_THEORY, title: 'Метрики: теория',
+      completed: progress.includes(LevelStage.METRICS_THEORY) || completedStages.includes(LevelStage.METRICS_THEORY) },
+    { stage: LevelStage.METRICS_PRACTICE, title: 'Метрики: практика',
+      completed: progress.includes(LevelStage.METRICS_PRACTICE) || completedStages.includes(LevelStage.METRICS_PRACTICE) },
+    { stage: LevelStage.DECISION_MAKING_THEORY, title: 'Принятие решений: теория',
+      completed: progress.includes(LevelStage.DECISION_MAKING_THEORY) || completedStages.includes(LevelStage.DECISION_MAKING_THEORY) },
+    { stage: LevelStage.DECISION_MAKING_PRACTICE, title: 'Принятие решений: практика',
+      completed: progress.includes(LevelStage.DECISION_MAKING_PRACTICE) || completedStages.includes(LevelStage.DECISION_MAKING_PRACTICE) },
+    { stage: LevelStage.QUIZ, title: 'Финальный тест',
+      completed: progress.includes(LevelStage.QUIZ) || completedStages.includes(LevelStage.QUIZ) },
+    { stage: LevelStage.COMPLETE, title: 'Завершение',
+      completed: progress.includes(LevelStage.COMPLETE) || completedStages.includes(LevelStage.COMPLETE) }
   ];
   
   // Рендер содержимого в зависимости от текущего этапа
   const renderStageContent = () => {
     // Создание компонента кнопки "Назад"
-    const backButton = currentStage !== 'intro' ? (
+    const backButton = currentStage !== LevelStage.INTRO ? (
       <button 
         className={componentStyles.btnSecondary}
         onClick={goToPreviousStage}
@@ -548,7 +549,7 @@ const Level1: NextPage = () => {
     ) : null;
     
     switch (currentStage) {
-      case 'intro':
+      case LevelStage.INTRO:
         // Шаги интро
         const introSteps = [
           // Шаг 1: Введение
@@ -573,7 +574,7 @@ const Level1: NextPage = () => {
             <div className="mb-4 mt-6">
               <MentorTip
                 tip="Добро пожаловать! В этом уровне вы будете чередовать теорию и практику, что поможет лучше усвоить материал. Не спешите и внимательно выполняйте все задания."
-                position="right-bottom"
+                position="bottom-right"
                 showIcon={true}
                 avatar="/characters/avatar_mentor.png"
                 name="Ментор"
@@ -618,67 +619,59 @@ const Level1: NextPage = () => {
           <div className={componentStyles.container}>
             <StepNavigation 
               steps={introSteps} 
-              onComplete={() => handleStageComplete('intro')}
+              onComplete={() => handleStageComplete(LevelStage.INTRO)}
               completeButtonText="Начать обучение"
             />
           </div>
         );
         
-      case 'product-thinking-theory':
-        return <ProductMindsetTheory onComplete={() => handleStageComplete('product-thinking-theory')} />;
+      case LevelStage.PRODUCT_THINKING_THEORY:
+        return <ProductMindsetTheory onComplete={() => handleStageComplete(LevelStage.PRODUCT_THINKING_THEORY)} />;
         
-      case 'ux-analysis-theory':
-        return <UXAnalysisTheory onComplete={() => handleStageComplete('ux-analysis-theory')} />;
+      case LevelStage.UX_ANALYSIS_THEORY:
+        return <UXAnalysisTheory onComplete={() => handleStageComplete(LevelStage.UX_ANALYSIS_THEORY)} />;
         
-      case 'metrics-theory':
-        return <MetricsTheory onComplete={() => handleStageComplete('metrics-theory')} />;
+      case LevelStage.METRICS_THEORY:
+        return <MetricsTheory onComplete={() => handleStageComplete(LevelStage.METRICS_THEORY)} />;
         
-      case 'decision-making-theory':
-        return <DecisionMakingTheory onComplete={() => handleStageComplete('decision-making-theory')} />;
+      case LevelStage.DECISION_MAKING_THEORY:
+        return <DecisionMakingTheory onComplete={() => handleStageComplete(LevelStage.DECISION_MAKING_THEORY)} />;
       
-      case 'product-thinking-practice':
-        return <ProductThinkingPractice onComplete={() => handleStageComplete('product-thinking-practice')} />;
+      case LevelStage.PRODUCT_THINKING_PRACTICE:
+        return <ProductThinkingPractice onComplete={() => handleStageComplete(LevelStage.PRODUCT_THINKING_PRACTICE)} />;
         
-      case 'ux-analysis-practice':
-        return <UXAnalysisPractice onComplete={() => handleStageComplete('ux-analysis-practice')} />;
+      case LevelStage.UX_ANALYSIS_PRACTICE:
+        return <UXAnalysisPractice onComplete={() => handleStageComplete(LevelStage.UX_ANALYSIS_PRACTICE)} />;
         
-      case 'metrics-practice':
-        return <MetricsPractice onComplete={() => handleStageComplete('metrics-practice')} />;
+      case LevelStage.METRICS_PRACTICE:
+        return <MetricsPractice onComplete={() => handleStageComplete(LevelStage.METRICS_PRACTICE)} />;
         
-      case 'decision-making-practice':
-        return <DecisionMakingPractice onComplete={() => handleStageComplete('decision-making-practice')} />;
+      case LevelStage.DECISION_MAKING_PRACTICE:
+        return <DecisionMakingPractice onComplete={() => handleStageComplete(LevelStage.DECISION_MAKING_PRACTICE)} />;
       
-      case 'quiz':
+      case LevelStage.QUIZ:
         return (
           <div className={componentStyles.container}>
             <h1 className={componentStyles.header}>Финальный тест</h1>
-            <QuizComponent
+            <Quiz
               questions={quizQuestions}
-              onComplete={(score) => {
-                setQuizScore(score);
-                if (score > 0) {
-                  handleStageComplete('quiz');
+              onComplete={(results) => {
+                setQuizScore(results.score);
+                if (results.score > 0) {
+                  handleStageComplete(LevelStage.QUIZ);
                 }
               }}
             />
           </div>
         );
         
-      case 'complete':
+      case LevelStage.COMPLETE:
         return (
-          <div className={componentStyles.container}>
-            <h1 className={componentStyles.header}>Поздравляем!</h1>
-            <p className={componentStyles.text}>
-              Вы успешно завершили первый уровень и освоили основы продуктового мышления.
-            </p>
-            <div className="flex justify-end mt-6">
-              <button 
-                className={componentStyles.btnPrimary}
-                onClick={() => router.push('/levels')}
-              >
-                Вернуться к списку уровней
-              </button>
-            </div>
+          <div className="max-w-4xl mx-auto">
+            <Completion onComplete={() => {
+              // Здесь можно добавить дополнительную логику при завершении
+              router.push('/levels');
+            }} />
           </div>
         );
         
@@ -725,7 +718,10 @@ const quizQuestions: QuizQuestion[] = [
       { id: "c", text: "Медленная загрузка страницы", isCorrect: false },
       { id: "d", text: "Отсутствие возможности прикрепить файлы", isCorrect: false },
     ],
-    explanation: "Согласно отзывам пользователей и аналитике, основной проблемой является большое количество обязательных полей, что усложняет и замедляет процесс создания задачи. Это подтверждается высоким процентом отказов на этапе заполнения дополнительных полей."
+    explanation: "Согласно отзывам пользователей и аналитике, основной проблемой является большое количество обязательных полей, что усложняет и замедляет процесс создания задачи. Это подтверждается высоким процентом отказов на этапе заполнения дополнительных полей.",
+    type: 'single',
+    difficulty: 'medium',
+    points: 10
   },
   {
     id: 2,
@@ -736,7 +732,10 @@ const quizQuestions: QuizQuestion[] = [
       { id: "c", text: "Мобильный телефон", isCorrect: true },
       { id: "d", text: "Конверсия одинакова на всех устройствах", isCorrect: false },
     ],
-    explanation: "Аналитика показывает, что на мобильных устройствах самая низкая конверсия завершения создания задачи. Это связано с тем, что форма не оптимизирована для маленьких экранов, и пользователям сложнее заполнять множество полей."
+    explanation: "Аналитика показывает, что на мобильных устройствах самая низкая конверсия завершения создания задачи. Это связано с тем, что форма не оптимизирована для маленьких экранов, и пользователям сложнее заполнять множество полей.",
+    type: 'single',
+    difficulty: 'easy',
+    points: 5
   },
   {
     id: 3,
@@ -747,7 +746,10 @@ const quizQuestions: QuizQuestion[] = [
       { id: "c", text: "Реализовать поэтапное создание задачи с разделением на шаги", isCorrect: false },
       { id: "d", text: "Упростить форму и сделать большинство полей опциональными", isCorrect: true },
     ],
-    explanation: "Упрощение формы и снижение количества обязательных полей напрямую решает основную проблему, выявленную в исследовании – сложный и перегруженный процесс создания задачи. Это позволит быстрее создавать базовые задачи и увеличит конверсию."
+    explanation: "Упрощение формы и снижение количества обязательных полей напрямую решает основную проблему, выявленную в исследовании – сложный и перегруженный процесс создания задачи. Это позволит быстрее создавать базовые задачи и увеличит конверсию.",
+    type: 'single',
+    difficulty: 'medium',
+    points: 10
   },
   {
     id: 4,
@@ -758,7 +760,10 @@ const quizQuestions: QuizQuestion[] = [
       { id: "c", text: "Метод тестирования интерфейса с реальными пользователями", isCorrect: false },
       { id: "d", text: "Способ организации навигации на сайте", isCorrect: false },
     ],
-    explanation: "Прогрессивное раскрытие – это принцип дизайна, при котором информация и опции показываются пользователю постепенно, по мере необходимости, чтобы снизить когнитивную нагрузку. Это особенно полезно для сложных форм и процессов."
+    explanation: "Прогрессивное раскрытие – это принцип дизайна, при котором информация и опции показываются пользователю постепенно, по мере необходимости, чтобы снизить когнитивную нагрузку. Это особенно полезно для сложных форм и процессов.",
+    type: 'single',
+    difficulty: 'hard',
+    points: 15
   },
   {
     id: 5,
@@ -769,7 +774,10 @@ const quizQuestions: QuizQuestion[] = [
       { id: "c", text: "Качественное исследование (интервью)", isCorrect: false },
       { id: "d", text: "A/B тестирование различных вариантов интерфейса", isCorrect: true },
     ],
-    explanation: "В проекте были использованы анализ отзывов, количественные и качественные исследования, но не было A/B тестирования различных вариантов интерфейса. Это могло бы быть полезным дополнительным методом для проверки эффективности разных решений."
+    explanation: "В проекте были использованы анализ отзывов, количественные и качественные исследования, но не было A/B тестирования различных вариантов интерфейса. Это могло бы быть полезным дополнительным методом для проверки эффективности разных решений.",
+    type: 'single',
+    difficulty: 'medium',
+    points: 10
   }
 ];
 

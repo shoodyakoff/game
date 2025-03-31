@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import DialogBubble from '../../../levels/DialogBubble';
-import ProgressIndicator from '../../../levels/ProgressIndicator';
-import NotesSystem from '../../../levels/NotesSystem';
+import DialogBubble from '../../DialogBubble';
+import ProgressIndicator from '../../ProgressIndicator';
+import NotesSystem from '../../NotesSystem';
 import styles from '../common/styles';
 import StageNavigation from '../common/StageNavigation';
-import LevelStage from '../common/LevelStages';
+import { LevelStage } from '../../../../types/level';
+import MentorTip from '../../shared/feedback/MentorTip';
 
 interface StakeholderBriefingProps {
   goToPreviousStage: () => void;

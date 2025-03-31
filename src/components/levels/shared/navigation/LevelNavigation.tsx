@@ -1,7 +1,7 @@
 import React from 'react';
-import { LevelStage } from '../../../types/level';
+import { LevelStage } from '../../../../../types/level';
 
-interface LevelNavigationProps {
+export interface LevelNavigationProps {
   currentStage: LevelStage;
   setCurrentStage: (stage: LevelStage) => void;
   stages: { 

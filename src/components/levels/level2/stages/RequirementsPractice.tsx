@@ -1,9 +1,9 @@
 import React from 'react';
-import MentorTip from '../../../levels/MentorTip';
-import NotesSystem from '../../../levels/NotesSystem';
+import MentorTip from '../../shared/feedback/MentorTip';
+import NotesSystem from '../../NotesSystem';
 import styles from '../common/styles';
 import StageNavigation from '../common/StageNavigation';
-import LevelStage from '../common/LevelStages';
+import { LevelStage } from '../../../../types/level';
 
 interface RequirementsPracticeProps {
   goToPreviousStage: () => void;

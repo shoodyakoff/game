@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { styles } from '../common/styles';
-import MentorTip from '../../../../components/common/MentorTip';
-import StepNavigation from '../../../../components/common/StepNavigation';
+import MentorTip from '../../shared/feedback/MentorTip';
+import StepNavigation from '../../shared/navigation/StepNavigation';
 
 interface UXAnalysisTheoryProps {
   onComplete: () => void;
@@ -57,13 +57,8 @@ const UXAnalysisTheory: React.FC<UXAnalysisTheoryProps> = ({ onComplete }) => {
       </div>
 
       <MentorTip
-        content={
-          <div>
-            <h3 className="text-lg font-bold mb-2">Ментор</h3>
-            <p>Помните, что UX — это не только про красивый дизайн. Это про то, насколько легко и приятно пользователям достигать своих целей с помощью вашего продукта.</p>
-          </div>
-        }
-        position="right"
+        tip="Помните, что UX — это не только про красивый дизайн. Это про то, насколько легко и приятно пользователям достигать своих целей с помощью вашего продукта."
+        position="top-right"
       />
     </div>,
 
@@ -111,13 +106,8 @@ const UXAnalysisTheory: React.FC<UXAnalysisTheoryProps> = ({ onComplete }) => {
       </div>
 
       <MentorTip
-        content={
-          <div>
-            <h3 className="text-lg font-bold mb-2">Ментор</h3>
-            <p>Попробуйте выбрать принципы, которые, по вашему мнению, наиболее критичны для TaskMaster. Подумайте, как они могут помочь в решении текущих проблем.</p>
-          </div>
-        }
-        position="left"
+        tip="Попробуйте выбрать принципы, которые, по вашему мнению, наиболее критичны для TaskMaster. Подумайте, как они могут помочь в решении текущих проблем."
+        position="bottom-left"
       />
     </div>,
 
@@ -206,13 +196,8 @@ const UXAnalysisTheory: React.FC<UXAnalysisTheoryProps> = ({ onComplete }) => {
       </div>
 
       <MentorTip
-        content={
-          <div>
-            <h3 className="text-lg font-bold mb-2">Ментор</h3>
-            <p>Комбинируйте разные методы исследований для получения полной картины. Качественные методы помогают понять 'почему', а количественные - 'что' и 'сколько'.</p>
-          </div>
-        }
-        position="right"
+        tip="Комбинируйте разные методы исследований для получения полной картины. Качественные методы помогают понять 'почему', а количественные - 'что' и 'сколько'."
+        position="bottom-right"
       />
     </div>,
 
@@ -260,14 +245,14 @@ const UXAnalysisTheory: React.FC<UXAnalysisTheoryProps> = ({ onComplete }) => {
       </div>
 
       <MentorTip
-        content={
-          <div>
-            <h3 className="text-lg font-bold mb-2">Ментор</h3>
-            <p>Выберите метрики, которые наиболее релевантны для вашей текущей задачи. Помните, что не все метрики одинаково важны на разных этапах развития продукта.</p>
-          </div>
-        }
-        position="bottom"
+        tip="Отслеживайте эти метрики регулярно, чтобы вовремя заметить проблемы и оценить эффективность внесенных улучшений."
+        position="bottom-right"
       />
+    </div>,
+
+    // Шаг 5: UX-инструменты
+    <div key="tools" className={styles.section}>
+      // ... existing code ...
     </div>
   ];
 
@@ -276,7 +261,11 @@ const UXAnalysisTheory: React.FC<UXAnalysisTheoryProps> = ({ onComplete }) => {
       <StepNavigation
         steps={steps}
         onComplete={onComplete}
-        completeButtonText="Перейти к практике"
+        showBackButton={true}
+        continueButtonText="Далее"
+        completeButtonText="Завершить"
+        showProgress={true}
+        showStepNumbers={true}
       />
     </div>
   );

@@ -17,6 +17,7 @@ export const styles = {
   // Кнопки
   btnPrimary: "bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-4 rounded-md flex items-center justify-center transition-colors shadow",
   btnSecondary: "bg-slate-700 hover:bg-slate-600 text-slate-300 font-medium py-2 px-4 rounded-md flex items-center justify-center transition-colors shadow border border-slate-600",
+  btnOutline: "bg-transparent hover:bg-slate-700 text-slate-300 font-medium py-2 px-4 rounded-md flex items-center justify-center transition-colors shadow border border-slate-500",
   btnNavigation: "flex items-center px-3 py-1 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 focus:outline-none transition-all duration-200",
   btnDisabled: "opacity-50 cursor-not-allowed",
   

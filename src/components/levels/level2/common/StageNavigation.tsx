@@ -1,6 +1,23 @@
 import React from 'react';
-import LevelStage, { stageNames } from './LevelStages';
+import { LevelStage } from '../../../../types/level';
 import styles from './styles';
+
+// Названия стадий для отображения в навигации
+const stageNames = {
+  [LevelStage.STAKEHOLDERS_THEORY]: 'Теория стейкхолдеров',
+  [LevelStage.STAKEHOLDER_BRIEFING]: 'Брифинг стейкхолдеров',
+  [LevelStage.REQUIREMENTS_THEORY]: 'Сбор требований: теория',
+  [LevelStage.REQUIREMENTS_PRACTICE]: 'Сбор требований: практика',
+  [LevelStage.USERS_RESEARCH_THEORY]: 'Исследование пользователей: теория',
+  [LevelStage.USERS_RESEARCH_PRACTICE]: 'Исследование пользователей: практика',
+  [LevelStage.COMPETITORS_THEORY]: 'Анализ конкурентов: теория',
+  [LevelStage.COMPETITORS_PRACTICE]: 'Анализ конкурентов: практика',
+  [LevelStage.PLANNING_THEORY]: 'Планирование: теория',
+  [LevelStage.PLANNING_PRACTICE]: 'Планирование: практика',
+  [LevelStage.PRESENTATION_THEORY]: 'Презентация: теория',
+  [LevelStage.PRESENTATION_PRACTICE]: 'Презентация: практика',
+  [LevelStage.COMPLETE]: 'Завершение'
+};
 
 interface StageNavigationProps {
   currentStage: LevelStage;

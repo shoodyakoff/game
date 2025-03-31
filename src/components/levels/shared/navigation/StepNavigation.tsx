@@ -1,36 +1,29 @@
 import React, { useState } from 'react';
 
-interface StepNavigationProps {
+export interface StepNavigationProps {
   steps: React.ReactNode[];
   onComplete?: () => void;
   showBackButton?: boolean;
   continueButtonText?: string;
   completeButtonText?: string;
+  showProgress?: boolean;
+  showStepNumbers?: boolean;
 }
 
-/**
- * Компонент для пошаговой навигации по контенту
- * 
- * @param steps Массив React-компонентов, представляющих каждый шаг
- * @param onComplete Функция, которая будет вызвана при завершении всех шагов
- * @param showBackButton Отображать ли кнопку "Назад"
- * @param continueButtonText Текст для кнопки продолжения (по умолчанию "Продолжить")
- * @param completeButtonText Текст для кнопки завершения (по умолчанию "Завершить")
- */
 const StepNavigation: React.FC<StepNavigationProps> = ({
   steps,
   onComplete,
   showBackButton = true,
   continueButtonText = 'Продолжить',
-  completeButtonText = 'Далее'
+  completeButtonText = 'Далее',
+  showProgress = true,
+  showStepNumbers = true
 }) => {
   const [currentStep, setCurrentStep] = useState(0);
   
-  // Перейти к следующему шагу
   const handleNext = () => {
     if (currentStep < steps.length - 1) {
       setCurrentStep(currentStep + 1);
-      // Прокручиваем к началу нового шага после небольшой задержки
       setTimeout(() => {
         const stepElement = document.getElementById(`step-content-${currentStep + 1}`);
         if (stepElement) {
@@ -42,11 +35,9 @@ const StepNavigation: React.FC<StepNavigationProps> = ({
     }
   };
   
-  // Вернуться к предыдущему шагу
   const handleBack = () => {
     if (currentStep > 0) {
       setCurrentStep(currentStep - 1);
-      // Прокручиваем к началу предыдущего шага после небольшой задержки
       setTimeout(() => {
         const stepElement = document.getElementById(`step-content-${currentStep - 1}`);
         if (stepElement) {
@@ -56,7 +47,6 @@ const StepNavigation: React.FC<StepNavigationProps> = ({
     }
   };
   
-  // Прокрутка к определенному шагу
   const handleScrollToStep = (stepIndex: number) => {
     const stepElement = document.getElementById(`step-content-${stepIndex}`);
     if (stepElement) {
@@ -67,13 +57,17 @@ const StepNavigation: React.FC<StepNavigationProps> = ({
   return (
     <div className="step-navigation">
       <div className="step-content mb-6">
-        {/* Рендерим все шаги до текущего включительно */}
         {steps.slice(0, currentStep + 1).map((step, index) => (
           <div 
             key={index} 
             id={`step-content-${index}`} 
             className={`py-6 ${index !== 0 ? 'border-t border-gray-700 mt-8' : ''}`}
           >
+            {showStepNumbers && (
+              <div className="text-sm text-slate-400 mb-4">
+                Шаг {index + 1} из {steps.length}
+              </div>
+            )}
             {step}
           </div>
         ))}
@@ -92,22 +86,25 @@ const StepNavigation: React.FC<StepNavigationProps> = ({
             )}
           </div>
           
-          {/* Индикатор прогресса */}
-          <div className="flex items-center">
-            {steps.map((_, index) => (
-              <div 
-                key={index}
-                className={`h-2 w-6 mx-1 rounded-full transition-all duration-300 ${
-                  index <= currentStep ? 'bg-indigo-500' : 'bg-gray-600'
-                } ${index === currentStep ? 'w-10' : 'w-4'}`}
-                onClick={() => index <= currentStep && handleScrollToStep(index)}
-                style={{ cursor: index <= currentStep ? 'pointer' : 'default' }}
-              />
-            ))}
-            <span className="ml-3 text-white text-sm font-medium">
-              {currentStep + 1} / {steps.length}
-            </span>
-          </div>
+          {showProgress && (
+            <div className="flex items-center">
+              {steps.map((_, index) => (
+                <div 
+                  key={index}
+                  className={`h-2 mx-1 rounded-full transition-all duration-300 ${
+                    index <= currentStep ? 'bg-indigo-500' : 'bg-gray-600'
+                  } ${index === currentStep ? 'w-10' : 'w-4'}`}
+                  onClick={() => index <= currentStep && handleScrollToStep(index)}
+                  style={{ cursor: index <= currentStep ? 'pointer' : 'default' }}
+                />
+              ))}
+              {showStepNumbers && (
+                <span className="ml-3 text-white text-sm font-medium">
+                  {currentStep + 1} / {steps.length}
+                </span>
+              )}
+            </div>
+          )}
           
           <div>
             {currentStep < steps.length - 1 ? (
@@ -129,7 +126,6 @@ const StepNavigation: React.FC<StepNavigationProps> = ({
         </div>
       </div>
       
-      {/* Добавляем отступ внизу для фиксированной панели навигации */}
       <div className="h-20"></div>
     </div>
   );
