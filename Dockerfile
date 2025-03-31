@@ -19,12 +19,11 @@ RUN npm ci && \
 FROM base AS builder
 WORKDIR /app
 
-# Объявляем переменные окружения как ARG
+# Объявляем переменные окружения как ARG (кроме секретных)
 ARG NEXTAUTH_URL
 ARG NEXT_PUBLIC_API_URL
 ARG NODE_ENV=production
 ARG MONGODB_URI
-ARG NEXTAUTH_SECRET
 
 # Используем значения по умолчанию только для сборки, если переменные не переданы
 ENV NEXTAUTH_URL=${NEXTAUTH_URL:-http://localhost:3000}
@@ -32,13 +31,15 @@ ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:3000}
 ENV NODE_ENV=${NODE_ENV}
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV MONGODB_URI=${MONGODB_URI:-mongodb://localhost:27017/game-portal}
-ENV NEXTAUTH_SECRET=${NEXTAUTH_SECRET:-temporarysecretforbuildonlydonotuseinproduction}
 # Отключаем проверку MongoDB для сборки
 ENV SKIP_MONGODB_CHECK=true
 
 # Копируем зависимости
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+
+# Создаем файл-заглушку для секретов во время сборки
+RUN echo "NEXTAUTH_SECRET=dummy-build-value" > .env.build
 
 # Создание оптимизированной сборки
 RUN npm run build
@@ -53,7 +54,8 @@ RUN rm -rf node_modules && \
     rm -rf test && \
     rm -rf tests && \
     rm -rf __tests__ && \
-    rm -rf coverage
+    rm -rf coverage && \
+    rm -f .env.build # Удаляем файл с фиктивными секретами
 
 # Финальный образ
 FROM base AS runner
@@ -76,6 +78,7 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
 # Отключаем проверку MongoDB чтобы система могла стартовать
 ENV SKIP_MONGODB_CHECK=true
+# Не храним секреты в ENV - они будут переданы при запуске контейнера
 
 # Копируем необходимые файлы 
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
