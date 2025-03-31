@@ -32,7 +32,7 @@ ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:3000}
 ENV NODE_ENV=${NODE_ENV}
 ENV NEXT_TELEMETRY_DISABLED=1
 
-# Отключаем проверку MongoDB для сборки
+# Отключаем проверку MongoDB только для сборки
 ENV SKIP_MONGODB_CHECK=true
 
 # Копируем зависимости
@@ -73,16 +73,10 @@ RUN addgroup --system --gid 1001 nodejs && \
 RUN mkdir -p .next && \
     chown -R nextjs:nodejs .
 
-# Устанавливаем только публичные переменные окружения
+# Устанавливаем только необходимые переменные окружения
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
-ENV NEXT_PUBLIC_APP_NAME=${NEXT_PUBLIC_APP_NAME}
-ENV NEXT_PUBLIC_APP_VERSION=${NEXT_PUBLIC_APP_VERSION}
-ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:3000}
-
-# Отключаем проверку MongoDB чтобы система могла стартовать
-ENV SKIP_MONGODB_CHECK=true
 
 # Копируем необходимые файлы 
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
@@ -99,32 +93,32 @@ if ! pgrep -x "node" > /dev/null; then\n\
     exit 1\n\
 fi\n\
 \n\
-# Проверяем, что порт 3000 открыт\n\
-if ! nc -z localhost 3000; then\n\
-    echo "Server is not listening on port 3000"\n\
-    exit 1\n\
+# Проверяем доступность MongoDB\n\
+if [ -n "$MONGODB_URI" ]; then\n\
+    echo "Checking MongoDB connection..."\n\
+    if ! nc -z $(echo $MONGODB_URI | sed -n "s/.*@\\([^/]*\\).*/\1/p") 27017; then\n\
+        echo "MongoDB is not accessible"\n\
+        exit 1\n\
+    fi\n\
 fi\n\
 \n\
-# Проверяем ответ сервера\n\
-response=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3000/api/healthcheck)\n\
-if [ "$response" != "200" ]; then\n\
-    echo "Server returned status $response"\n\
+# Проверяем доступность API\n\
+if ! curl -f http://localhost:3000/api/healthcheck; then\n\
+    echo "API is not responding"\n\
     exit 1\n\
 fi\n\
-\n\
-echo "Application is healthy"\n\
-exit 0' > /app/healthcheck.sh && \
-    chmod +x /app/healthcheck.sh && \
-    chown nextjs:nodejs /app/healthcheck.sh
+' > /usr/local/bin/healthcheck.sh && \
+chmod +x /usr/local/bin/healthcheck.sh
 
 # Переключаемся на непривилегированного пользователя
 USER nextjs
 
+# Открываем порт
 EXPOSE 3000
 
-# Проверка работоспособности с увеличенным временем ожидания
-HEALTHCHECK --interval=30s --timeout=10s --start-period=120s --retries=3 \
-    CMD /app/healthcheck.sh
+# Запускаем приложение
+CMD ["npm", "start"]
 
-# Запускаем Next.js в production режиме
-CMD ["npm", "start"] 
+# Добавляем healthcheck
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD /usr/local/bin/healthcheck.sh 
