@@ -1,130 +1,91 @@
-import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
+import { NextResponse, NextRequest } from 'next/server';
 import { getToken } from 'next-auth/jwt';
 
-// Основной middleware
+// Публичные маршруты, которые не требуют аутентификации
+const publicRoutes = [
+  '/auth/login',
+  '/auth/register',
+  '/auth/logout',
+  '/auth/error',
+  '/api/auth',
+  '/api/healthcheck',
+  '/healthcheck',
+  '/about',
+  '/docs',
+  '_next',
+  'favicon.ico'
+];
+
+// Функция для проверки, является ли маршрут публичным
+const isPublicRoute = (path: string) => {
+  return publicRoutes.some(route => path.startsWith(`/${route}`) || path === route);
+};
+
 export async function middleware(request: NextRequest) {
-  const path = request.nextUrl.pathname;
+  console.log('Middleware вызван для пути:', request.nextUrl.pathname);
   
-  // Пути, доступные без авторизации
-  const publicPaths = [
-    '/',
-    '/auth/login',
-    '/auth/register',
-    '/auth/forgot-password',
-    '/api/auth/callback',
-    '/api/auth/session',
-    '/api/auth/csrf',
-    '/api/auth/update-session'
-  ];
-  
-  // Проверяем, является ли путь API маршрутом
-  const isApiRoute = path.startsWith('/api/');
-  
-  // Пути для выбора персонажа (поддерживаем и путь index, и путь select)
-  const characterSelectionPaths = ['/character', '/character/index', '/character/select'];
-  
-  // Защищенные пути, требующие персонажа
-  const characterProtectedPaths = [
-    '/dashboard',
-    '/game',
-    '/level'
-  ];
-  
-  // Получаем токен из сессии
-  const token = await getToken({
-    req: request,
-    secret: process.env.NEXTAUTH_SECRET
-  });
-  
-  // Проверяем наличие cookie, указывающего на недавний выбор персонажа
-  const hasJustSelectedCharacter = request.cookies.get('just_selected_character')?.value === 'true';
-  
-  // Расширенное логирование для отладки
-  console.log(`[Middleware] Path: ${path}, Token: ${token ? 'Yes' : 'No'}, HasChar: ${token?.hasCharacter || false}, JustSelected: ${hasJustSelectedCharacter || false}`);
-  
-  // Проверяем статические ресурсы и пропускаем их
-  if (path.startsWith('/_next') || 
-      path.startsWith('/images/') || 
-      path.startsWith('/characters/') || 
-      path.startsWith('/favicon')) {
+  // Проверяем, является ли маршрут публичным
+  if (isPublicRoute(request.nextUrl.pathname)) {
+    console.log('Публичный маршрут, пропускаем проверку аутентификации:', request.nextUrl.pathname);
     return NextResponse.next();
   }
   
-  // 1. Если пользователь не авторизован и путь не публичный
-  if (!token && !publicPaths.some(p => path === p || path.startsWith('/api/auth/'))) {
-    // Для API запросов возвращаем 401
-    if (isApiRoute) {
-      return new NextResponse(
-        JSON.stringify({ error: 'Unauthorized', message: 'Требуется авторизация' }),
-        { status: 401, headers: { 'content-type': 'application/json' } }
-      );
+  // Статические файлы и API (кроме защищенных) пропускаем
+  if (request.nextUrl.pathname.startsWith('/_next') || 
+      request.nextUrl.pathname.startsWith('/api/public')) {
+    console.log('Статический или публичный API маршрут, пропускаем');
+    return NextResponse.next();
+  }
+  
+  try {
+    // Получаем токен из cookies
+    const token = await getToken({ 
+      req: request,
+      secret: process.env.NEXTAUTH_SECRET
+    });
+    
+    console.log('Результат проверки токена:', { 
+      hasToken: !!token, 
+      tokenId: token?.id,
+      userEmail: token?.email 
+    });
+    
+    // Если токен отсутствует, перенаправляем на страницу входа
+    if (!token) {
+      console.log('Токен не найден, перенаправление на страницу входа');
+      const loginUrl = new URL('/auth/login', request.url);
+      loginUrl.searchParams.set('callbackUrl', request.url);
+      return NextResponse.redirect(loginUrl);
     }
     
-    // Редирект на вход с сохранением исходного URL
-    console.log(`[Middleware] Перенаправление неаутентифицированного пользователя на логин`);
-    return NextResponse.redirect(new URL(`/auth/login?callbackUrl=${encodeURIComponent(request.nextUrl.pathname)}`, request.url));
-  }
-  
-  // 2. Если пользователь авторизован и пытается посетить публичные пути авторизации
-  if (token && (path === '/auth/login' || path === '/auth/register')) {
-    const redirectTo = token.hasCharacter === true ? '/dashboard' : '/character/select';
-    console.log(`[Middleware] Перенаправление аутентифицированного пользователя с ${path} на ${redirectTo}`);
-    return NextResponse.redirect(new URL(redirectTo, request.url));
-  }
-  
-  // 3. Если у пользователя уже есть персонаж и он пытается выбрать персонажа
-  if (token && characterSelectionPaths.includes(path) && token.hasCharacter === true) {
-    console.log('[Middleware] Пользователь уже имеет персонажа, перенаправление на дашборд');
-    return NextResponse.redirect(new URL('/dashboard', request.url));
-  }
-  
-  // 4. Перенаправляем с /character и /character/index на /character/select для унификации
-  if (token && (path === '/character' || path === '/character/index')) {
-    console.log('[Middleware] Перенаправление с /character на /character/select');
-    return NextResponse.redirect(new URL('/character/select', request.url));
-  }
-  
-  // 5. Если у пользователя нет персонажа и он пытается посетить защищенные пути
-  if (token && characterProtectedPaths.some(p => path.startsWith(p)) && token.hasCharacter !== true) {
-    // Если персонаж только что выбран (есть cookie), разрешаем доступ к дашборду
-    if (hasJustSelectedCharacter) {
-      console.log('[Middleware] Доступ разрешен, т.к. персонаж только что выбран');
-      
-      // Очищаем cookie для следующих запросов
-      const response = NextResponse.next();
-      // Устанавливаем значение в false и время жизни в 0 (удаляем)
-      response.cookies.set('just_selected_character', 'false', { 
-        maxAge: 0,
-        path: '/'
-      });
-      
-      console.log('[Middleware] Cookie just_selected_character удален');
-      return response;
+    // Проверка прав на защищенные маршруты (например, админка)
+    if (request.nextUrl.pathname.startsWith('/admin') && token.role !== 'admin') {
+      console.log('Доступ в админку запрещен для роли:', token.role);
+      return NextResponse.redirect(new URL('/', request.url));
     }
     
-    // Для API запросов возвращаем 403
-    if (isApiRoute) {
-      return new NextResponse(
-        JSON.stringify({ error: 'Character Required', message: 'Требуется выбрать персонажа' }),
-        { status: 403, headers: { 'content-type': 'application/json' } }
-      );
-    }
-    
-    // Устанавливаем кастомные заголовки для отладки
-    const response = NextResponse.redirect(new URL('/character/select', request.url));
-    response.headers.set('X-Debug-Redirect', 'No character found');
-    console.log('[Middleware] Перенаправление на страницу выбора персонажа из:', path);
-    return response;
+    // Если все проверки прошли успешно, пропускаем запрос
+    console.log('Аутентификация успешна, пропускаем запрос');
+    return NextResponse.next();
+  } catch (error) {
+    console.error('Ошибка в middleware:', error);
+    // В случае ошибки перенаправляем на страницу входа
+    const loginUrl = new URL('/auth/login', request.url);
+    return NextResponse.redirect(loginUrl);
   }
-
-  return NextResponse.next();
 }
 
-// Определяем пути, для которых будет вызываться middleware
+// Указываем, для каких маршрутов применять middleware
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico).*)',
+    /*
+     * Совпадение со всеми маршрутами, кроме:
+     * 1. Маршруты статических файлов (_next)
+     * 2. Несуществующие API маршруты
+     * 3. /api/auth - маршруты аутентификации (необходимы для работы NextAuth)
+     * 4. /api/healthcheck - для проверки работоспособности
+     */
+    '/((?!api/auth|api/healthcheck|_next/static|_next/image|favicon.ico).*)',
   ],
 };
 

@@ -96,105 +96,61 @@ export const authOptions: NextAuthOptions = {
     updateAge: 24 * 60 * 60, // 1 день - как часто обновляется сессия
   },
   callbacks: {
-    async jwt({ token, user, trigger, session }) {
-      try {
-        // Если пользователь входит в систему
-        if (user) {
-          console.log('[NextAuth] JWT callback - new user data', { id: user.id });
-          // Пытаемся загрузить дополнительную информацию о пользователе из базы данных
-          await connectDB();
-          console.log('[NextAuth] Проверка данных пользователя из базы данных');
-          
-          try {
-            // Используем конструкцию try/catch для безопасного доступа к пользователю
-            const userData = await mongoose.model('User').findById(user.id).lean() as UserDocument | null;
-            
-            if (userData) {
-              // Добавляем свойства из базы данных в токен с безопасной проверкой
-              const additionalData = {
-                id: user.id,
-                role: userData.role || 'user',
-                hasCharacter: userData.hasCharacter || false,
-                fullName: userData.fullName || '',
-                bio: userData.bio || '',
-                characterType: userData.characterType || ''
-              };
-              
-              console.log('[NextAuth] Обновлены данные JWT из базы данных:', {
-                hasCharacter: additionalData.hasCharacter,
-                characterType: additionalData.characterType,
-                role: additionalData.role
-              });
-              
-              token = {
-                ...token,
-                ...additionalData
-              };
-            }
-          } catch (dbError) {
-            console.error('[NextAuth] Ошибка при доступе к пользователю в базе данных:', dbError);
-          }
-        }
-        
-        // Если клиент запрашивает обновление сессии
-        if (trigger === 'update' && session) {
-          console.log('[NextAuth] JWT обновление через trigger=update');
-          
-          // Копируем все свойства из обновленной сессии в токен
-          // Это важно, чтобы избежать конфликтов между токеном и сессией
-          if (session.user) {
-            const { id, hasCharacter, characterType, role } = session.user as any;
-            
-            // Обновляем только поля, которые существуют в запросе обновления
-            if (hasCharacter !== undefined) token.hasCharacter = hasCharacter;
-            if (characterType !== undefined) token.characterType = characterType;
-            if (role !== undefined) token.role = role;
-            
-            console.log('[NextAuth] JWT обновлен из сессии:', {
-              hasCharacter,
-              characterType,
-              role
-            });
-          }
-        }
-      } catch (error) {
-        console.error('[NextAuth] Ошибка в JWT callback:', error);
-        // Не позволяем ошибке "сломать" JWT - продолжаем с существующим токеном
+    async jwt({ token, user, account }) {
+      console.log('JWT Callback вызван', { 
+        hasToken: !!token, 
+        hasUser: !!user, 
+        tokenId: token?.sub,
+        userId: user?.id 
+      });
+      
+      if (user) {
+        console.log('Добавление пользовательской информации в токен JWT');
+        token.id = user.id;
+        token.email = user.email;
+        token.name = user.name;
+        token.image = user.image;
+        token.role = user.role;
+        token.hasCharacter = user.hasCharacter;
+        token.fullName = user.fullName || '';
+        token.bio = user.bio || '';
+        token.characterType = user.characterType || '';
       }
+      
+      console.log('Итоговый JWT токен', { 
+        id: token.id, 
+        email: token.email, 
+        name: token.name,
+        role: token.role
+      });
       
       return token;
     },
     
     async session({ session, token }) {
-      try {
-        console.log('[NextAuth] Session callback', { tokenId: token.id });
-        
-        // Инициализируем session.user с необходимыми полями по умолчанию
-        session.user = {
-          id: "",
-          name: session.user?.name || null,
-          email: session.user?.email || null,
-          image: session.user?.image || null,
-          role: "user",
-          hasCharacter: false,
-          fullName: "",
-          bio: "",
-          characterType: ""
-        };
-        
-        // Обеспечиваем наличие всех полей из токена в сессии
+      console.log('Session Callback вызван', { 
+        hasSession: !!session, 
+        hasToken: !!token,
+        sessionUserId: session?.user?.email, 
+        tokenId: token?.id 
+      });
+      
+      if (token) {
+        console.log('Добавление пользовательской информации в сессию');
         session.user.id = token.id as string;
         session.user.role = token.role as string;
         session.user.hasCharacter = token.hasCharacter as boolean;
-        session.user.fullName = (token.fullName as string) || '';
-        session.user.bio = (token.bio as string) || '';
-        session.user.characterType = (token.characterType as string) || '';
-        
-        console.log('[NextAuth] Session after update:', session.user);
-      } catch (error) {
-        console.error('[NextAuth] Ошибка в Session callback:', error);
-        // Возвращаем базовую сессию в случае ошибки
+        session.user.fullName = token.fullName as string;
+        session.user.bio = token.bio as string;
+        session.user.characterType = token.characterType as string;
       }
+      
+      console.log('Итоговая сессия', { 
+        id: session?.user?.id,
+        email: session?.user?.email,
+        name: session?.user?.name,
+        role: session?.user?.role
+      });
       
       return session;
     },
@@ -259,9 +215,9 @@ export const authOptions: NextAuthOptions = {
       name: `next-auth.session-token`,
       options: {
         httpOnly: true,
-        sameSite: 'lax',
-        path: '/',
-        secure: process.env.NODE_ENV === 'production',
+        sameSite: "lax",
+        path: "/",
+        secure: process.env.NODE_ENV === "production",
       },
     },
   },

@@ -10,6 +10,8 @@ import { AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/router';
 import { SessionProvider } from 'next-auth/react';
 import SessionManager from '../components/auth/SessionManager';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 // Компонент для выполнения инициализации
 function AppInitializer({ children }: { children: React.ReactNode }) {
@@ -50,12 +52,24 @@ function MyApp({ Component, pageProps: { session, ...pageProps } }: AppProps) {
           <meta property="twitter:description" content="Обучающий игровой портал для развития профессиональных навыков через увлекательные игры и симуляции" />
           <meta property="twitter:image" content="https://gameportal.example.com/images/twitter-image.jpg" />
         </Head>
-        <SessionManager />
-        <AnimatePresence mode="wait" initial={false}>
-          <AppInitializer>
-            <Component {...pageProps} key={router.route} />
-          </AppInitializer>
-        </AnimatePresence>
+        <SessionManager>
+          <AnimatePresence mode="wait" initial={false}>
+            <AppInitializer>
+              <Component {...pageProps} key={router.route} />
+            </AppInitializer>
+          </AnimatePresence>
+          <ToastContainer
+            position="top-right"
+            autoClose={5000}
+            hideProgressBar={false}
+            newestOnTop
+            closeOnClick
+            rtl={false}
+            pauseOnFocusLoss
+            draggable
+            pauseOnHover
+          />
+        </SessionManager>
       </Provider>
     </SessionProvider>
   );
