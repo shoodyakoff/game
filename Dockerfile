@@ -19,18 +19,19 @@ RUN npm ci && \
 FROM base AS builder
 WORKDIR /app
 
-# Объявляем переменные окружения как ARG (кроме секретных)
-ARG NEXTAUTH_URL
+# Объявляем только публичные переменные окружения
+ARG NEXT_PUBLIC_APP_NAME=GOTOGROW
+ARG NEXT_PUBLIC_APP_VERSION=1.0.0
 ARG NEXT_PUBLIC_API_URL
 ARG NODE_ENV=production
-ARG MONGODB_URI
 
-# Используем значения по умолчанию только для сборки, если переменные не переданы
-ENV NEXTAUTH_URL=${NEXTAUTH_URL:-http://localhost:3000}
+# Устанавливаем значения по умолчанию для публичных переменных
+ENV NEXT_PUBLIC_APP_NAME=${NEXT_PUBLIC_APP_NAME}
+ENV NEXT_PUBLIC_APP_VERSION=${NEXT_PUBLIC_APP_VERSION}
 ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:3000}
 ENV NODE_ENV=${NODE_ENV}
 ENV NEXT_TELEMETRY_DISABLED=1
-ENV MONGODB_URI=${MONGODB_URI:-mongodb://localhost:27017/game-portal}
+
 # Отключаем проверку MongoDB для сборки
 ENV SKIP_MONGODB_CHECK=true
 
@@ -38,8 +39,8 @@ ENV SKIP_MONGODB_CHECK=true
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# Создаем файл-заглушку для секретов во время сборки
-RUN echo "NEXTAUTH_SECRET=dummy-build-value" > .env.build
+# Создаем временный файл с фиктивными значениями только для сборки
+RUN echo "NEXTAUTH_SECRET=dummy-build-secret\nJWT_SECRET=dummy-build-jwt\nMONGODB_URI=mongodb://localhost:27017/dummy-db" > .env.build
 
 # Создание оптимизированной сборки
 RUN npm run build
@@ -55,7 +56,7 @@ RUN rm -rf node_modules && \
     rm -rf tests && \
     rm -rf __tests__ && \
     rm -rf coverage && \
-    rm -f .env.build # Удаляем файл с фиктивными секретами
+    rm -f .env.build # Удаляем временный файл с фиктивными значениями
 
 # Финальный образ
 FROM base AS runner
@@ -72,13 +73,16 @@ RUN addgroup --system --gid 1001 nodejs && \
 RUN mkdir -p .next && \
     chown -R nextjs:nodejs .
 
-# Устанавливаем переменные окружения для production
+# Устанавливаем только публичные переменные окружения
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
+ENV NEXT_PUBLIC_APP_NAME=${NEXT_PUBLIC_APP_NAME}
+ENV NEXT_PUBLIC_APP_VERSION=${NEXT_PUBLIC_APP_VERSION}
+ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:3000}
+
 # Отключаем проверку MongoDB чтобы система могла стартовать
 ENV SKIP_MONGODB_CHECK=true
-# Не храним секреты в ENV - они будут переданы при запуске контейнера
 
 # Копируем необходимые файлы 
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
@@ -87,16 +91,29 @@ COPY --from=builder --chown=nextjs:nodejs /app/node_modules ./node_modules
 COPY --from=builder --chown=nextjs:nodejs /app/package.json ./package.json
 COPY --from=builder --chown=nextjs:nodejs /app/next.config.js ./next.config.js
 
-# Создаем файл для проверки работоспособности приложения
+# Создаем расширенный скрипт для проверки работоспособности
 RUN echo '#!/bin/sh\n\
-# Простая проверка порта для быстрого успешного healthcheck\n\
-if nc -z localhost 3000; then\n\
-  echo "Server is listening on port 3000"\n\
-  exit 0\n\
-else\n\
-  echo "Server is not responding on port 3000"\n\
-  exit 1\n\
-fi' > /app/healthcheck.sh && \
+# Проверяем, что процесс node запущен\n\
+if ! pgrep -x "node" > /dev/null; then\n\
+    echo "Node process is not running"\n\
+    exit 1\n\
+fi\n\
+\n\
+# Проверяем, что порт 3000 открыт\n\
+if ! nc -z localhost 3000; then\n\
+    echo "Server is not listening on port 3000"\n\
+    exit 1\n\
+fi\n\
+\n\
+# Проверяем ответ сервера\n\
+response=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3000/api/healthcheck)\n\
+if [ "$response" != "200" ]; then\n\
+    echo "Server returned status $response"\n\
+    exit 1\n\
+fi\n\
+\n\
+echo "Application is healthy"\n\
+exit 0' > /app/healthcheck.sh && \
     chmod +x /app/healthcheck.sh && \
     chown nextjs:nodejs /app/healthcheck.sh
 
