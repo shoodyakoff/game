@@ -6,14 +6,29 @@ import User from '../../../server/models/User';
 import { verifyToken } from '../../../server/utils/jwt';
 import mongoose from 'mongoose';
 
-// Инициализация подключения к базе данных
-try {
-  console.log('Подключение к базе данных MongoDB...');
-  await connectDB();
-  console.log('Подключение к MongoDB успешно');
-} catch (error) {
-  console.error('Ошибка подключения к MongoDB:', error);
-}
+// Инициализация подключения к базе данных - делаем асинхронно, но не блокируем запуск
+let dbConnectionPromise: Promise<any> | null = null;
+
+// Функция для получения подключения к БД
+const getDbConnection = async () => {
+  if (!dbConnectionPromise) {
+    dbConnectionPromise = (async () => {
+      try {
+        console.log('Подключение к базе данных MongoDB...');
+        const connection = await connectDB();
+        console.log('Подключение к MongoDB успешно');
+        return connection;
+      } catch (error) {
+        console.error('Ошибка подключения к MongoDB:', error);
+        return null;
+      }
+    })();
+  }
+  return dbConnectionPromise;
+};
+
+// Инициируем подключение, но не ждем его завершения
+getDbConnection();
 
 // Тип для результата запроса MongoDB 
 interface UserDocument {
