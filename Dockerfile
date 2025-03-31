@@ -19,23 +19,23 @@ RUN npm ci && \
 FROM base AS builder
 WORKDIR /app
 
-# Сначала устанавливаем переменные окружения
+# Сначала устанавливаем переменные окружения с значениями по умолчанию
 ARG NEXTAUTH_URL=http://localhost:3000
 ARG NEXT_PUBLIC_API_URL=http://localhost:3000
 ARG NODE_ENV=production
+ARG MONGODB_URI=mongodb://localhost:27017/game-portal
+ARG NEXTAUTH_SECRET=temporarysecretforbuildonlydonotuseinproduction
 
 ENV NEXTAUTH_URL=${NEXTAUTH_URL}
 ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
 ENV NODE_ENV=${NODE_ENV}
 ENV NEXT_TELEMETRY_DISABLED=1
-ENV NEXTAUTH_SECRET=your-super-secret-nextauth-key
+ENV MONGODB_URI=${MONGODB_URI}
+ENV NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
 
 # Копируем зависимости
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-
-# Проверка содержимого next.config.js перед сборкой
-RUN cat next.config.js
 
 # Создание оптимизированной сборки
 RUN npm run build
@@ -71,8 +71,6 @@ RUN mkdir -p .next && \
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
-ENV NEXTAUTH_URL=http://localhost:3000
-ENV NEXTAUTH_SECRET=your-super-secret-nextauth-key
 
 # Копируем необходимые файлы 
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
@@ -88,9 +86,9 @@ USER nextjs
 
 EXPOSE 3000
 
-# Проверка работоспособности
+# Проверка работоспособности - используем healthcheck вместо health
 HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
-    CMD wget -q -O /dev/null http://localhost:3000/api/health || exit 1
+    CMD wget -q -O /dev/null http://localhost:3000/api/healthcheck || exit 1
 
 # Запускаем Next.js в production режиме
 CMD ["npm", "start"] 
