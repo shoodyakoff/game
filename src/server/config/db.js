@@ -11,7 +11,8 @@ const connectDB = async () => {
         host: 'mongodb-mock-connection',
         // Базовые методы для имитации соединения
         on: () => {},
-        once: () => {}
+        once: () => {},
+        readyState: 1
       }
     };
   }
@@ -28,7 +29,8 @@ const connectDB = async () => {
           connection: {
             host: 'mongodb-missing-uri',
             on: () => {},
-            once: () => {}
+            once: () => {},
+            readyState: 0
           }
         };
       } else {
@@ -40,12 +42,32 @@ const connectDB = async () => {
     
     const connection = await mongoose.connect(mongoURI, {
       // Увеличиваем таймауты для более стабильного подключения
-      serverSelectionTimeoutMS: 10000, // 10 секунд вместо 30 (по умолчанию)
+      serverSelectionTimeoutMS: 10000, // 10 секунд
       connectTimeoutMS: 10000,
       socketTimeoutMS: 30000,
+      // Дополнительные опции
+      maxPoolSize: 10,
+      minPoolSize: 1,
+      keepAlive: true,
+      keepAliveInitialDelay: 300000
     });
     
     console.log(`MongoDB подключена: ${connection.connection.host}`);
+    
+    // Настройка обработчиков событий для мониторинга соединения
+    mongoose.connection.on('error', (err) => {
+      console.error('Ошибка соединения MongoDB:', err);
+    });
+    
+    mongoose.connection.on('disconnected', () => {
+      console.log('MongoDB отключена');
+    });
+    
+    process.on('SIGINT', async () => {
+      await mongoose.connection.close();
+      console.log('MongoDB соединение закрыто (SIGINT)');
+      process.exit(0);
+    });
     
     return connection;
   } catch (err) {
@@ -66,12 +88,21 @@ const connectDB = async () => {
         connection: {
           host: 'mongodb-error-connection',
           on: () => {},
-          once: () => {}
+          once: () => {},
+          readyState: 0
         }
       };
     } else {
-      // В режиме разработки можно падать для отладки
-      process.exit(1);
+      // В режиме разработки возвращаем ошибку вместо выхода
+      console.error('Ошибка подключения к MongoDB в режиме разработки');
+      return {
+        connection: {
+          host: 'mongodb-error-connection-dev',
+          on: () => {},
+          once: () => {},
+          readyState: 0
+        }
+      };
     }
   }
 };

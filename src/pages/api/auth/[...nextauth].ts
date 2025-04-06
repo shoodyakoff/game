@@ -4,169 +4,126 @@ import type { SessionStrategy } from 'next-auth';
 import connectDB from '../../../server/config/db';
 import User from '../../../server/models/User';
 import { verifyToken } from '../../../server/utils/jwt';
-import mongoose from 'mongoose';
-
-// Инициализация подключения к базе данных - делаем асинхронно, но не блокируем запуск
-let dbConnectionPromise: Promise<any> | null = null;
-
-// Функция для получения подключения к БД
-const getDbConnection = async () => {
-  if (!dbConnectionPromise) {
-    dbConnectionPromise = (async () => {
-      try {
-        console.log('Подключение к базе данных MongoDB...');
-        const connection = await connectDB();
-        console.log('Подключение к MongoDB успешно');
-        return connection;
-      } catch (error) {
-        console.error('Ошибка подключения к MongoDB:', error);
-        return null;
-      }
-    })();
-  }
-  return dbConnectionPromise;
-};
-
-// Инициируем подключение, но не ждем его завершения
-getDbConnection();
+import mongoose, { Model } from 'mongoose';
+import { MongoDBAdapter } from '@auth/mongodb-adapter';
+import clientPromise from '../../../server/config/mongodb';
+import { compare } from 'bcryptjs';
 
 // Тип для результата запроса MongoDB 
-interface UserDocument {
+interface UserDocument extends mongoose.Document {
   _id: mongoose.Types.ObjectId;
-  role?: string;
+  email: string;
+  password: string;
+  username: string;
+  role: 'user' | 'admin';
   hasCharacter?: boolean;
   fullName?: string;
   bio?: string;
   characterType?: string;
-  [key: string]: any;
+  matchPassword(enteredPassword: string): Promise<boolean>;
 }
 
 export const authOptions: NextAuthOptions = {
+  adapter: MongoDBAdapter(clientPromise),
   providers: [
     CredentialsProvider({
-      // Имя, которое будет отображаться в форме входа
       name: 'Credentials',
       credentials: {
-        email: { label: 'Email', type: 'email' },
-        password: { label: 'Password', type: 'password' }
+        email: { label: "Email", type: "email" },
+        password: { label: "Password", type: "password" }
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
-          console.log('Отсутствуют учетные данные:', { 
-            hasEmail: !!credentials?.email, 
-            hasPassword: !!credentials?.password 
-          });
+          console.log('Отсутствуют учетные данные');
           return null;
         }
-        
+
         try {
-          console.log(`Попытка авторизации для email: ${credentials.email}`);
+          // Устанавливаем соединение с MongoDB
+          await connectDB();
           
-          // Найти пользователя по email
-          const user = await (User as any).findOne({ email: credentials.email }).select('+password');
+          const user = await (User as Model<UserDocument>)
+            .findOne({ email: credentials.email })
+            .select('+password')
+            .exec();
+          
           if (!user) {
-            console.log(`Пользователь не найден: ${credentials.email}`);
-            throw new Error('Пользователь не найден');
+            console.log('Пользователь не найден:', credentials.email);
+            return null;
           }
-          
-          // Проверить пароль
-          console.log(`Сравнение пароля для: ${credentials.email}`);
-          const isMatch = await user.matchPassword(credentials.password);
-          console.log(`Результат сравнения пароля: ${isMatch}`);
-          
-          if (!isMatch) {
-            console.log(`Неверный пароль для: ${credentials.email}`);
-            throw new Error('Неверный пароль');
+
+          const isValid = await user.matchPassword(credentials.password);
+
+          if (!isValid) {
+            console.log('Неверный пароль для пользователя:', credentials.email);
+            return null;
           }
-          
-          console.log(`Успешный вход: ${credentials.email}, ID: ${user._id}`);
-          
-          // Обновляем дату последнего входа
-          user.last_login = new Date();
-          await user.save();
-          
-          // Вернуть пользователя в формате NextAuth
+
+          // Обновляем время последнего входа
+          await (User as Model<UserDocument>).updateOne(
+            { _id: user._id },
+            { $set: { last_login: new Date() } }
+          );
+
+          console.log('Успешная аутентификация для пользователя:', credentials.email);
           return {
             id: user._id.toString(),
             email: user.email,
             name: user.username,
-            image: user.avatar,
-            role: user.role,
-            hasCharacter: user.hasCharacter || false,
-            fullName: user.fullName || '',
-            bio: user.bio || '',
-            characterType: user.characterType || ''
+            role: user.role
           };
         } catch (error) {
-          console.error('Ошибка аутентификации в NextAuth:', error);
-          // Перебрасываем ошибку для обработки в NextAuth
-          throw error;
+          console.error('Ошибка при авторизации:', {
+            name: error.name,
+            message: error.message,
+            code: error.code,
+            stack: error.stack
+          });
+          throw new Error('Ошибка при проверке учетных данных');
         }
       }
-    }),
+    })
   ],
   session: {
-    strategy: 'jwt' as SessionStrategy,
-    maxAge: 30 * 24 * 60 * 60, // 30 дней
-    updateAge: 24 * 60 * 60, // 1 день - как часто обновляется сессия
+    strategy: 'jwt',
+    maxAge: 30 * 24 * 60 * 60, // 30 days
   },
   callbacks: {
-    async jwt({ token, user, account }) {
-      console.log('JWT Callback вызван', { 
-        hasToken: !!token, 
-        hasUser: !!user, 
-        tokenId: token?.sub,
-        userId: user?.id 
+    async jwt({ token, user }) {
+      console.log('JWT Callback вызван', {
+        hasToken: !!token,
+        hasUser: !!user,
+        tokenId: token?.id,
+        userId: user?.id
       });
-      
+
       if (user) {
-        console.log('Добавление пользовательской информации в токен JWT');
         token.id = user.id;
         token.email = user.email;
         token.name = user.name;
-        token.image = user.image;
         token.role = user.role;
-        token.hasCharacter = user.hasCharacter;
-        token.fullName = user.fullName || '';
-        token.bio = user.bio || '';
-        token.characterType = user.characterType || '';
       }
-      
-      console.log('Итоговый JWT токен', { 
-        id: token.id, 
-        email: token.email, 
-        name: token.name,
-        role: token.role
-      });
-      
+
+      console.log('Итоговый JWT токен', token);
       return token;
     },
-    
     async session({ session, token }) {
-      console.log('Session Callback вызван', { 
-        hasSession: !!session, 
+      console.log('Session Callback вызван', {
+        hasSession: !!session,
         hasToken: !!token,
-        sessionUserId: session?.user?.email, 
-        tokenId: token?.id 
+        sessionUserId: session?.user?.email,
+        tokenId: token?.id
       });
-      
-      if (token) {
+
+      if (token && session.user) {
         console.log('Добавление пользовательской информации в сессию');
-        session.user.id = token.id as string;
-        session.user.role = token.role as string;
-        session.user.hasCharacter = token.hasCharacter as boolean;
-        session.user.fullName = token.fullName as string;
-        session.user.bio = token.bio as string;
-        session.user.characterType = token.characterType as string;
+        session.user.id = token.id;
+        session.user.email = token.email;
+        session.user.name = token.name;
+        session.user.role = token.role;
       }
-      
-      console.log('Итоговая сессия', { 
-        id: session?.user?.id,
-        email: session?.user?.email,
-        name: session?.user?.name,
-        role: session?.user?.role
-      });
-      
+
+      console.log('Итоговая сессия', session.user);
       return session;
     },
 
@@ -215,14 +172,13 @@ export const authOptions: NextAuthOptions = {
   },
   pages: {
     signIn: '/auth/login',
-    error: '/auth/login',
-    signOut: '/auth/login',
+    error: '/auth/error',
   },
   // JWT настройки
   jwt: {
     maxAge: 60 * 60 * 24 * 30, // 30 дней
   },
-  secret: process.env.NEXTAUTH_SECRET || 'секрет_для_режима_разработки',
+  secret: process.env.NEXTAUTH_SECRET,
   debug: process.env.NODE_ENV === 'development',
   // Настройки Cookie
   cookies: {
