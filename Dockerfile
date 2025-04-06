@@ -81,6 +81,7 @@ COPY --from=builder --chown=nextjs:nodejs /app/package.json ./package.json
 COPY --from=builder --chown=nextjs:nodejs /app/next.config.js ./next.config.js
 
 # Создание скрипта проверки здоровья
+USER root
 RUN echo '#!/bin/sh\n\
 # Базовая проверка на запуск процесса\n\
 if pgrep -x "node" > /dev/null; then\n\
@@ -91,7 +92,8 @@ else\n\
     echo "Node process is not running"\n\
     exit 1\n\
 fi\n\
-' > /usr/local/bin/healthcheck.sh && chmod +x /usr/local/bin/healthcheck.sh
+' > /usr/local/bin/healthcheck.sh && chmod +x /usr/local/bin/healthcheck.sh && \
+  ls -la /usr/local/bin/healthcheck.sh
 
 # Переключение на непривилегированного пользователя
 USER nextjs
