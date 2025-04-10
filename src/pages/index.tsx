@@ -154,7 +154,7 @@ const Home: NextPage = () => {
           
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
             <img
-              src="https://via.placeholder.com/600x400/4338ca/FFFFFF?text=Обучение+через+игры"
+              src="/images/games/hero-image.jpg"
               alt="Обучение через игры"
               className="rounded-xl shadow-2xl w-full h-auto lg:h-full lg:w-auto object-cover"
             />

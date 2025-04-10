@@ -25,11 +25,20 @@ export default authMiddleware({
     // Создаем новый ответ
     const response = NextResponse.next();
     
-    // Настройка Content-Security-Policy
-    response.headers.set(
-      "Content-Security-Policy",
-      "default-src 'self'; script-src 'self' 'unsafe-inline' https://clerk.gotogrow.app https://*.clerk.accounts.dev; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://images.clerk.dev; font-src 'self' data:; connect-src 'self' https://clerk.gotogrow.app https://*.clerk.accounts.dev; frame-src 'self' https://clerk.gotogrow.app https://*.clerk.accounts.dev;"
-    );
+    // Настройка Content-Security-Policy с разрешениями для разработки
+    if (process.env.NODE_ENV === 'development') {
+      // В режиме разработки используем более либеральную политику
+      response.headers.set(
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://clerk.gotogrow.app https://*.clerk.accounts.dev; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: https://images.clerk.dev https://via.placeholder.com; connect-src 'self' https://clerk.gotogrow.app https://*.clerk.accounts.dev https://api.clerk.dev; frame-src 'self' https://clerk.gotogrow.app https://*.clerk.accounts.dev; worker-src 'self' blob:;"
+      );
+    } else {
+      // В production используем более строгую политику
+      response.headers.set(
+        "Content-Security-Policy",
+        "default-src 'self'; script-src 'self' 'unsafe-inline' https://clerk.gotogrow.app https://*.clerk.accounts.dev; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: https://images.clerk.dev https://via.placeholder.com; connect-src 'self' https://clerk.gotogrow.app https://*.clerk.accounts.dev https://api.clerk.dev; frame-src 'self' https://clerk.gotogrow.app https://*.clerk.accounts.dev; worker-src 'self' blob:;"
+      );
+    }
     
     // Дополнительные заголовки безопасности
     response.headers.set("X-Content-Type-Options", "nosniff");
