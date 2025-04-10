@@ -1,73 +1,55 @@
-import { NextResponse, NextRequest } from 'next/server';
-import { getToken } from 'next-auth/jwt';
+import { authMiddleware } from "@clerk/nextjs";
+import { NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 
-// Публичные маршруты, которые не требуют аутентификации
-const publicRoutes = [
-  '/',
-  '/auth/login',
-  '/auth/register',
-  '/auth/logout',
-  '/auth/error',
-  '/api/auth',
-  '/api/healthcheck',
-  '/healthcheck',
-  '/about',
-  '/docs',
-  '_next',
-  'favicon.ico'
-];
-
-// Функция для проверки, является ли маршрут публичным
-const isPublicRoute = (path: string) => {
-  return publicRoutes.some(route => path.startsWith(`/${route}`) || path === route || path.startsWith(route));
-};
-
-export async function middleware(request: NextRequest) {
-  const path = request.nextUrl.pathname;
+// Основное middleware с использованием Clerk
+export default authMiddleware({
+  // Публичные маршруты, доступные без аутентификации
+  publicRoutes: [
+    "/",
+    "/sign-in",
+    "/sign-in/(.*)",
+    "/sign-up",
+    "/sign-up/(.*)",
+    "/api/healthcheck",
+    "/api/health"
+  ],
   
-  // Всегда пропускаем статические файлы и API healthcheck
-  if (path.startsWith('/_next') || 
-      path.startsWith('/api/healthcheck') ||
-      path.startsWith('/api/auth') || 
-      path.startsWith('/favicon')) {
-    return NextResponse.next();
-  }
+  // Маршруты, которые нужно игнорировать
+  ignoredRoutes: [
+    "/api/webhooks/clerk"
+  ],
   
-  // Проверяем, является ли маршрут публичным и пропускаем проверку
-  if (isPublicRoute(path)) {
-    return NextResponse.next();
-  }
-  
-  try {
-    // Получаем токен из cookies
-    const token = await getToken({ 
-      req: request,
-      secret: process.env.NEXTAUTH_SECRET
-    });
+  // Функция для кастомизации поведения при отсутствии авторизации
+  afterAuth(auth, req) {
+    // Создаем новый ответ
+    const response = NextResponse.next();
     
-    // Если токен отсутствует, перенаправляем на страницу входа
-    if (!token) {
-      const loginUrl = new URL('/auth/login', request.url);
-      return NextResponse.redirect(loginUrl);
+    // Настройка Content-Security-Policy
+    response.headers.set(
+      "Content-Security-Policy",
+      "default-src 'self'; script-src 'self' 'unsafe-inline' https://clerk.gotogrow.app https://*.clerk.accounts.dev; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://images.clerk.dev; font-src 'self' data:; connect-src 'self' https://clerk.gotogrow.app https://*.clerk.accounts.dev; frame-src 'self' https://clerk.gotogrow.app https://*.clerk.accounts.dev;"
+    );
+    
+    // Дополнительные заголовки безопасности
+    response.headers.set("X-Content-Type-Options", "nosniff");
+    response.headers.set("X-Frame-Options", "DENY");
+    response.headers.set("X-XSS-Protection", "1; mode=block");
+    response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+    
+    // Если пользователь не авторизован и маршрут не публичный, 
+    // перенаправляем на страницу входа
+    if (!auth.userId && !auth.isPublicRoute) {
+      const signInUrl = new URL('/sign-in', req.url);
+      signInUrl.searchParams.set('redirect_url', req.url);
+      return NextResponse.redirect(signInUrl);
     }
     
-    // Если все проверки прошли успешно, пропускаем запрос
-    return NextResponse.next();
-  } catch (error) {
-    console.error('Ошибка в middleware:', error);
-    // В случае ошибки также пропускаем запрос, чтобы не блокировать приложение
-    return NextResponse.next();
+    return response;
   }
-}
+});
 
-// Указываем, для каких маршрутов применять middleware
+// Конфигурация для middleware
 export const config = {
-  matcher: [
-    '/((?!api/auth|api/healthcheck|_next/static|_next/image|favicon.ico).*)',
-  ],
-};
-
-// Объявление типа глобальной переменной для работы с таймаутом
-declare global {
-  var middlewareCleanupTimeout: NodeJS.Timeout | undefined;
-} 
+  matcher: ["/((?!.+\\.[\\w]+$|_next).*)", "/", "/(api|trpc)(.*)"],
+}; 

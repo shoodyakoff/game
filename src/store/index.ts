@@ -1,18 +1,19 @@
 import { configureStore } from '@reduxjs/toolkit';
-import authReducer from './slices/authSlice';
 import characterReducer from './slices/characterSlice';
+import userReducer from './slices/userSlice';
 
-const store = configureStore({
+export const store = configureStore({
   reducer: {
-    auth: authReducer,
     character: characterReducer,
+    user: userReducer
   },
+  devTools: process.env.NODE_ENV !== 'production',
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
       serializableCheck: {
         // Игнорируем несериализуемые значения в состоянии
-        ignoredActions: ['auth/loginSuccess', 'auth/registerSuccess'],
-        ignoredPaths: ['auth.user'],
+        ignoredActions: [],
+        ignoredPaths: [],
       },
     }),
 });

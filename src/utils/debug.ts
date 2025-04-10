@@ -4,20 +4,11 @@
 
 export function debugSession() {
   try {
-    // Получаем сессию из localStorage
-    const nextAuthSession = localStorage.getItem('nextauth.session');
-    if (!nextAuthSession) {
-      console.log('Debug Session: No session found in localStorage');
-      return;
-    }
+    // Получаем данные пользователя из Clerk (localStorage)
+    const clerkData = localStorage.getItem('clerk') || '{}';
+    const clerkSession = JSON.parse(clerkData);
     
-    // Парсим сессию
-    const session = JSON.parse(nextAuthSession);
-    console.log('Debug Session:', {
-      expires: new Date(session.expires),
-      user: session.user,
-      expiresIn: Math.round((new Date(session.expires).getTime() - Date.now()) / 1000 / 60) + ' минут'
-    });
+    console.log('Debug Clerk Session:', clerkSession);
     
     // Проверяем куки для отладки сессии
     const cookies = document.cookie.split(';').reduce((obj, cookie) => {
@@ -32,14 +23,23 @@ export function debugSession() {
     
     console.log('Debug Cookies:', cookies);
     
-    // Проверяем, не истекла ли сессия
-    if (new Date(session.expires) < new Date()) {
-      console.log('Debug Session: Session has expired!');
+    // Проверяем данные персонажа в localStorage
+    const characterData = localStorage.getItem('selectedCharacter');
+    if (characterData) {
+      try {
+        const character = JSON.parse(characterData);
+        console.log('Debug Character Data:', character);
+      } catch (e) {
+        console.error('Error parsing character data:', e);
+      }
+    } else {
+      console.log('No character data found in localStorage');
     }
     
     return {
-      session,
-      cookies
+      clerkSession,
+      cookies,
+      character: characterData ? JSON.parse(characterData) : null
     };
   } catch (error) {
     console.error('Debug Session Error:', error);

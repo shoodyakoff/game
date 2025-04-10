@@ -1,14 +1,13 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '../../auth/[...nextauth]';
+import { getAuth } from '@clerk/nextjs/server';
 
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  // Проверка авторизации
-  const session = await getServerSession(req, res, authOptions);
-  if (!session) {
+  // Проверка авторизации через Clerk
+  const { userId, sessionId } = getAuth(req);
+  if (!userId) {
     return res.status(401).json({ error: 'Необходима авторизация' });
   }
 
@@ -27,7 +26,7 @@ export default async function handler(
 
     // В реальной реализации здесь мы бы сохраняли прогресс в базе данных
     // Сейчас просто имитируем успешное сохранение
-    console.log(`Сохранение прогресса для пользователя ${session.user.email}: уровень 1, этап ${stage}, прогресс ${progress}%, решения:`, decisions);
+    console.log(`Сохранение прогресса для пользователя ${userId}: уровень 1, этап ${stage}, прогресс ${progress}%, решения:`, decisions);
 
     // Возвращаем обновленный статус прогресса
     return res.status(200).json({

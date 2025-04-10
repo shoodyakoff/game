@@ -2,11 +2,11 @@ import React from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import LogoutButton from '../LogoutButton';
-import { useSession } from 'next-auth/react';
+import { useUser } from '@clerk/nextjs';
 
 const Header: React.FC = () => {
   const router = useRouter();
-  const { data: session } = useSession();
+  const { user, isSignedIn } = useUser();
   
   return (
     <header className="bg-slate-800 border-b border-slate-700">
@@ -60,15 +60,15 @@ const Header: React.FC = () => {
             <div className="flex items-center">
               <div className="hidden md:block">
                 <span className="text-gray-300 text-sm mr-2">
-                  {session?.user?.name}
+                  {isSignedIn && user ? user.firstName || user.username : ''}
                 </span>
               </div>
               
               {/* Аватар пользователя */}
               <div className="w-8 h-8 rounded-full bg-indigo-500 flex items-center justify-center mr-3">
-                {session?.user?.name ? (
+                {isSignedIn && user ? (
                   <span className="text-white font-bold text-sm">
-                    {session.user.name.charAt(0).toUpperCase()}
+                    {(user.firstName || user.username || 'U').charAt(0).toUpperCase()}
                   </span>
                 ) : (
                   <span className="text-white font-bold text-sm">У</span>

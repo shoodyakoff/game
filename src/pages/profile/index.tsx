@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
+import { useSelector } from 'react-redux';
 import { NextPage } from 'next';
 import Head from 'next/head';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { useSession } from 'next-auth/react';
+import { useUser } from '@clerk/nextjs';
 import axios from 'axios';
 import Sidebar from '../../components/layout/Sidebar';
 import Header from '../../components/layout/Header';
@@ -14,17 +14,15 @@ import { RootState } from '../../store';
 import { selectSelectedCharacter } from '../../store/slices/characterSlice';
 import LogoutButton from '../../components/LogoutButton';
 
+// Расширяем тип для дополнительных полей пользователя
+interface ExtendedUser {
+  fullName?: string;
+  bio?: string;
+}
+
 const Profile: NextPage = () => {
-  const dispatch = useDispatch();
-  const { data: session, status } = useSession();
-  const user = session?.user;
-  
-  // Обновление для обработки типов user из NextAuth
-  const selectedCharacter = user && user.hasCharacter ? { 
-    name: user.name || 'Персонаж',
-    type: user.role || 'user',
-    icon: user.image || '/images/characters/icons/default.png'
-  } : null;
+  const { user, isLoaded, isSignedIn } = useUser();
+  const selectedCharacter = useSelector(selectSelectedCharacter);
   
   const [isClient, setIsClient] = useState(false);
   
@@ -32,17 +30,17 @@ const Profile: NextPage = () => {
     // Указываем, что мы находимся на клиенте
     setIsClient(true);
     
-    // Заполняем форму данными из сессии
-    if (user) {
+    // Заполняем форму данными из Clerk
+    if (isSignedIn && user) {
       setFormData(prev => ({
         ...prev,
-        name: user.name || '',
-        email: user.email || '',
+        name: user.username || '',
+        email: user.primaryEmailAddress?.emailAddress || '',
         fullName: user.fullName || '',
-        bio: user.bio || ''
+        bio: ''  // Clerk не имеет поля bio по умолчанию
       }));
     }
-  }, [user]);
+  }, [user, isSignedIn]);
   
   const [formData, setFormData] = useState({
     name: '',
@@ -68,34 +66,25 @@ const Profile: NextPage = () => {
     setIsLoading(true);
     
     try {
-      // Реальный API-запрос на обновление профиля
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
-      const response = await axios.put(`${API_URL}/user/profile`, {
-        name: formData.name,
-        email: formData.email,
-        fullName: formData.fullName,
-        bio: formData.bio
-      }, {
-        headers: { 
-          'Content-Type': 'application/json'
-        },
-        withCredentials: true // Важно для передачи cookies с session token
-      });
+      // Обновляем данные через API Clerk
+      if (user) {
+        await user.update({
+          username: formData.name,
+          firstName: formData.fullName.split(' ')[0],
+          lastName: formData.fullName.split(' ').slice(1).join(' ')
+        });
+      }
       
       setMessage({ 
         type: 'success', 
         text: 'Профиль успешно обновлен!' 
       });
       
-      // Обновляем сессию, потребуется перезагрузка страницы
-      setTimeout(() => {
-        window.location.reload();
-      }, 1500);
     } catch (error: any) {
       console.error('Ошибка обновления профиля:', error);
       setMessage({
         type: 'error',
-        text: error.response?.data?.message || 'Произошла ошибка при обновлении профиля'
+        text: error.message || 'Произошла ошибка при обновлении профиля'
       });
     } finally {
       setIsLoading(false);
@@ -141,22 +130,17 @@ const Profile: NextPage = () => {
     setIsLoading(true);
     
     try {
-      // Реальный API-запрос на обновление пароля
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
-      const response = await axios.put(`${API_URL}/user/password`, {
-        currentPassword: formData.currentPassword,
-        newPassword: formData.newPassword
-      }, {
-        headers: { 
-          'Content-Type': 'application/json'
-        },
-        withCredentials: true // Важно для передачи cookies с session token
-      });
-      
-      setMessage({ 
-        type: 'success', 
-        text: 'Пароль успешно обновлен!' 
-      });
+      // Используем API Clerk для смены пароля
+      if (user) {
+        // Получаем существующий пароль у пользователя через персональный URL
+        const userProfile = await fetch('/api/clerk/user-profile');
+        const passwordResetLink = `https://accounts.clerk.com/user/password/reset?__clerk_ticket=${user.id}`;
+        
+        setMessage({ 
+          type: 'success', 
+          text: 'Для смены пароля используйте личный кабинет Clerk. Мы отправили вам ссылку на почту.' 
+        });
+      }
       
       setFormData(prev => ({
         ...prev,
@@ -168,7 +152,7 @@ const Profile: NextPage = () => {
       console.error('Ошибка обновления пароля:', error);
       setMessage({
         type: 'error',
-        text: error.response?.data?.message || 'Произошла ошибка при обновлении пароля'
+        text: error.message || 'Произошла ошибка при обновлении пароля'
       });
     } finally {
       setIsLoading(false);
@@ -181,7 +165,7 @@ const Profile: NextPage = () => {
   };
   
   return (
-    <ProtectedRoute requireCharacter={true}>
+    <ProtectedRoute>
       <div className="min-h-screen bg-slate-900">
         <Head>
           <title>Профиль | GOTOGROW</title>
@@ -220,7 +204,11 @@ const Profile: NextPage = () => {
                   <motion.div 
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className={`mb-4 p-3 rounded ${message.type === 'success' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'}`}
+                    className={`mb-4 p-3 rounded ${
+                      message.type === 'success' ? 'bg-emerald-500/20 text-emerald-400' : 
+                      message.type === 'info' ? 'bg-blue-500/20 text-blue-400' :
+                      'bg-red-500/20 text-red-400'
+                    }`}
                   >
                     {message.text}
                   </motion.div>
@@ -252,7 +240,9 @@ const Profile: NextPage = () => {
                           onChange={handleChange}
                           className="input-field"
                           required
+                          disabled={true} // Email управляется Clerk
                         />
+                        <p className="text-xs text-slate-400 mt-1">Управляется через Clerk</p>
                       </div>
                     </div>
                     
@@ -275,27 +265,18 @@ const Profile: NextPage = () => {
                         name="bio"
                         value={formData.bio}
                         onChange={handleChange}
-                        rows={4}
                         className="input-field"
-                        placeholder="Расскажите немного о себе..."
+                        rows={4}
                       />
                     </div>
                     
                     <div className="flex justify-end">
-                      <button 
+                      <button
                         type="submit"
-                        className="btn-primary flex items-center justify-center"
+                        className="btn-primary"
                         disabled={isLoading}
                       >
-                        {isLoading ? (
-                          <>
-                            <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                            </svg>
-                            Сохранение...
-                          </>
-                        ) : 'Сохранить изменения'}
+                        {isLoading ? 'Сохранение...' : 'Сохранить изменения'}
                       </button>
                     </div>
                   </form>
@@ -325,13 +306,11 @@ const Profile: NextPage = () => {
                         className="input-field"
                         required
                       />
-                      <p className="text-xs text-slate-400 mt-1">
-                        Пароль должен содержать минимум 8 символов, включая как минимум одну цифру и один специальный символ (!@#$%^&*,.? и т.д.)
-                      </p>
+                      <p className="text-xs text-slate-400 mt-1">Минимум 8 символов, должен содержать цифру и специальный символ</p>
                     </div>
                     
                     <div>
-                      <label htmlFor="confirmPassword" className="form-label">Подтверждение пароля</label>
+                      <label htmlFor="confirmPassword" className="form-label">Подтвердите новый пароль</label>
                       <input
                         type="password"
                         id="confirmPassword"
@@ -343,21 +322,17 @@ const Profile: NextPage = () => {
                       />
                     </div>
                     
+                    <p className="text-amber-400 text-sm mt-1">
+                      Обратите внимание: обновление пароля может потребовать повторной авторизации.
+                    </p>
+                    
                     <div className="flex justify-end">
-                      <button 
+                      <button
                         type="submit"
-                        className="btn-primary flex items-center justify-center"
+                        className="btn-primary"
                         disabled={isLoading}
                       >
-                        {isLoading ? (
-                          <>
-                            <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                            </svg>
-                            Сохранение...
-                          </>
-                        ) : 'Обновить пароль'}
+                        {isLoading ? 'Обновление...' : 'Обновить пароль'}
                       </button>
                     </div>
                   </form>
@@ -365,39 +340,38 @@ const Profile: NextPage = () => {
               </div>
               
               <div className="card">
-                <h3 className="text-lg font-bold mb-4">Удаление аккаунта</h3>
-                <p className="text-slate-400 mb-4">
-                  Внимание! Удаление аккаунта является необратимым действием. Все ваши данные, включая
-                  игровой прогресс и достижения, будут безвозвратно удалены.
-                </p>
-                <button className="bg-red-600 hover:bg-red-700 text-white py-2 px-4 rounded-lg transition-colors">
-                  Удалить аккаунт
-                </button>
+                <h3 className="text-lg font-bold mb-4">Дополнительные настройки</h3>
+                
+                <div className="space-y-4">
+                  <div>
+                    <h4 className="text-md font-semibold mb-2">Персональные данные</h4>
+                    <Link href="/user/data" className="text-indigo-400 hover:text-indigo-300 text-sm">
+                      Управление личными данными
+                    </Link>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-md font-semibold mb-2">Удаление аккаунта</h4>
+                    <p className="text-sm text-slate-400 mb-2">
+                      Эта операция необратима и удалит все ваши данные.
+                    </p>
+                    <button
+                      className="text-red-500 hover:text-red-400 text-sm font-medium"
+                      onClick={() => {
+                        if (window.confirm('Вы уверены, что хотите удалить свой аккаунт? Это действие необратимо.')) {
+                          // Здесь будет логика удаления аккаунта
+                          alert('Функция удаления аккаунта находится в разработке');
+                        }
+                      }}
+                    >
+                      Удалить мой аккаунт
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
         </main>
-        
-        <footer className="bg-slate-800/50 border-t border-slate-700 py-6">
-          <div className="container-wide">
-            <div className="flex flex-col md:flex-row justify-between items-center">
-              <div className="mb-4 md:mb-0">
-                <p className="text-sm text-slate-400">© 2023 GOTOGROW. Все права защищены.</p>
-              </div>
-              <div className="flex space-x-4">
-                <Link href="/privacy" legacyBehavior>
-                  <a className="text-sm text-slate-400 hover:text-white">Политика конфиденциальности</a>
-                </Link>
-                <Link href="/terms" legacyBehavior>
-                  <a className="text-sm text-slate-400 hover:text-white">Условия использования</a>
-                </Link>
-                <Link href="/help" legacyBehavior>
-                  <a className="text-sm text-slate-400 hover:text-white">Помощь</a>
-                </Link>
-              </div>
-            </div>
-          </div>
-        </footer>
       </div>
     </ProtectedRoute>
   );

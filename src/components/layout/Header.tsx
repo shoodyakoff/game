@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useSession } from 'next-auth/react';
+import { useUser } from '@clerk/nextjs';
 import LogoutButton from '../LogoutButton';
 import UserProfile from '../UserProfile';
 
@@ -9,7 +9,7 @@ type HeaderProps = {
 };
 
 const Header: React.FC<HeaderProps> = ({ activePage }) => {
-  const { data: session } = useSession();
+  const { user, isSignedIn } = useUser();
   const [isClient, setIsClient] = useState(false);
   
   useEffect(() => {
@@ -36,25 +36,34 @@ const Header: React.FC<HeaderProps> = ({ activePage }) => {
         <nav className="hidden md:block">
           <ul className="flex space-x-4">
             <li>
-              <Link href="/dashboard" legacyBehavior>
-                <a className={activePage === 'dashboard' ? "nav-link-active" : "nav-link"}>Прогресс</a>
+              <Link 
+                href="/dashboard" 
+                className={activePage === 'dashboard' ? "nav-link-active" : "nav-link"}
+              >
+                Прогресс
               </Link>
             </li>
             <li>
-              <Link href="/levels" legacyBehavior>
-                <a className={activePage === 'levels' ? "nav-link-active" : "nav-link"}>Играть</a>
+              <Link 
+                href="/levels" 
+                className={activePage === 'levels' ? "nav-link-active" : "nav-link"}
+              >
+                Играть
               </Link>
             </li>
             <li>
-              <Link href="/profile" legacyBehavior>
-                <a className={activePage === 'profile' ? "nav-link-active" : "nav-link"}>Профиль</a>
+              <Link 
+                href="/profile" 
+                className={activePage === 'profile' ? "nav-link-active" : "nav-link"}
+              >
+                Профиль
               </Link>
             </li>
           </ul>
         </nav>
         
         <div className="flex items-center space-x-4">
-          {isClient && session?.user && (
+          {isClient && isSignedIn && user && (
             <UserProfile 
               className="text-sm text-slate-300 hidden md:flex items-center"
             />

@@ -1,35 +1,41 @@
 import '../styles/globals.css';
 import type { AppProps } from 'next/app';
+import { ClerkProvider, useUser } from '@clerk/nextjs';
 import { Provider } from 'react-redux';
 import { useEffect } from 'react';
 import store from '../store';
-import { checkAuthStatus } from '../store/slices/authSlice';
 import { initializeCharacter } from '../store/slices/characterSlice';
 import Head from 'next/head';
 import { AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/router';
-import { SessionProvider } from 'next-auth/react';
-import SessionManager from '../components/auth/SessionManager';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
-// Компонент для выполнения инициализации
+// Компонент для выполнения инициализации с учетом данных пользователя
 function AppInitializer({ children }: { children: React.ReactNode }) {
+  const { isLoaded, isSignedIn, user } = useUser();
+  
   useEffect(() => {
-    // Проверяем статус аутентификации
-    store.dispatch(checkAuthStatus());
-    // Инициализируем персонажа из localStorage
-    store.dispatch(initializeCharacter());
-  }, []);
+    // Инициализируем персонажа с приоритизацией данных из Clerk
+    if (isLoaded) {
+      if (isSignedIn && user) {
+        console.log('Инициализация персонажа на основе данных Clerk');
+        store.dispatch(initializeCharacter(user));
+      } else {
+        console.log('Пользователь не авторизован, сбрасываем данные персонажа');
+        store.dispatch(initializeCharacter(null));
+      }
+    }
+  }, [isLoaded, isSignedIn, user]);
 
   return <>{children}</>;
 }
 
-function MyApp({ Component, pageProps: { session, ...pageProps } }: AppProps) {
+function MyApp({ Component, pageProps }: AppProps) {
   const router = useRouter();
 
   return (
-    <SessionProvider session={session}>
+    <ClerkProvider {...pageProps}>
       <Provider store={store}>
         <Head>
           <title>GOTOGROW | Обучение через игры</title>
@@ -52,26 +58,24 @@ function MyApp({ Component, pageProps: { session, ...pageProps } }: AppProps) {
           <meta property="twitter:description" content="Обучающий игровой портал для развития профессиональных навыков через увлекательные игры и симуляции" />
           <meta property="twitter:image" content="https://gameportal.example.com/images/twitter-image.jpg" />
         </Head>
-        <SessionManager>
-          <AnimatePresence mode="wait" initial={false}>
-            <AppInitializer>
-              <Component {...pageProps} key={router.route} />
-            </AppInitializer>
-          </AnimatePresence>
-          <ToastContainer
-            position="top-right"
-            autoClose={5000}
-            hideProgressBar={false}
-            newestOnTop
-            closeOnClick
-            rtl={false}
-            pauseOnFocusLoss
-            draggable
-            pauseOnHover
-          />
-        </SessionManager>
+        <AnimatePresence mode="wait" initial={false}>
+          <AppInitializer>
+            <Component {...pageProps} key={router.route} />
+          </AppInitializer>
+        </AnimatePresence>
+        <ToastContainer
+          position="top-right"
+          autoClose={5000}
+          hideProgressBar={false}
+          newestOnTop
+          closeOnClick
+          rtl={false}
+          pauseOnFocusLoss
+          draggable
+          pauseOnHover
+        />
       </Provider>
-    </SessionProvider>
+    </ClerkProvider>
   );
 }
 

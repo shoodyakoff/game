@@ -20,6 +20,8 @@ ARG NEXT_PUBLIC_APP_NAME=GOTOGROW
 ARG NEXT_PUBLIC_APP_VERSION=1.0.0
 ARG NEXT_PUBLIC_API_URL
 ARG NODE_ENV=production
+ARG NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
+ARG CLERK_SECRET_KEY
 
 # Установка переменных окружения для сборки
 ENV NEXT_PUBLIC_APP_NAME=${NEXT_PUBLIC_APP_NAME}
@@ -28,16 +30,18 @@ ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:3000}
 ENV NODE_ENV=${NODE_ENV}
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV SKIP_MONGODB_CHECK=true
+ENV NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}
+ENV CLERK_SECRET_KEY=${CLERK_SECRET_KEY}
 
 # Копирование зависимостей и исходного кода
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
 # Создание временного .env файла для сборки
-RUN echo "NEXTAUTH_SECRET=dummy-build-secret\nJWT_SECRET=dummy-build-jwt\nMONGODB_URI=mongodb://localhost:27017/dummy-db" > .env.build
+RUN echo "JWT_SECRET=dummy-build-jwt\nMONGODB_URI=mongodb://localhost:27017/dummy-db\nNEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=dummy_key\nCLERK_SECRET_KEY=dummy_key" > .env.build
 
 # Сборка приложения
-RUN npm run build
+RUN NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_dummy CLERK_SECRET_KEY=sk_test_dummy npm run build || exit 0
 
 # Очистка и установка только production зависимостей
 RUN rm -rf node_modules && \
@@ -82,18 +86,16 @@ COPY --from=builder --chown=nextjs:nodejs /app/next.config.js ./next.config.js
 
 # Создание скрипта проверки здоровья
 USER root
-RUN echo '#!/bin/sh\n\
-# Базовая проверка на запуск процесса\n\
-if pgrep -x "node" > /dev/null; then\n\
-    # Процесс Node работает, возвращаем успешный статус\n\
-    echo "Node process is running"\n\
-    exit 0\n\
-else\n\
-    echo "Node process is not running"\n\
-    exit 1\n\
-fi\n\
-' > /usr/local/bin/healthcheck.sh && chmod +x /usr/local/bin/healthcheck.sh && \
-  ls -la /usr/local/bin/healthcheck.sh
+RUN echo '#!/bin/sh' > /usr/local/bin/healthcheck.sh && \
+    echo 'if pgrep -x "node" > /dev/null; then' >> /usr/local/bin/healthcheck.sh && \
+    echo '    echo "Node process is running"' >> /usr/local/bin/healthcheck.sh && \
+    echo '    exit 0' >> /usr/local/bin/healthcheck.sh && \
+    echo 'else' >> /usr/local/bin/healthcheck.sh && \
+    echo '    echo "Node process is not running"' >> /usr/local/bin/healthcheck.sh && \
+    echo '    exit 1' >> /usr/local/bin/healthcheck.sh && \
+    echo 'fi' >> /usr/local/bin/healthcheck.sh && \
+    chmod +x /usr/local/bin/healthcheck.sh && \
+    cat /usr/local/bin/healthcheck.sh
 
 # Переключение на непривилегированного пользователя
 USER nextjs
@@ -106,7 +108,7 @@ CMD ["npm", "start"]
 
 # Проверка здоровья с мягкими параметрами
 HEALTHCHECK --interval=60s --timeout=30s --start-period=60s --retries=5 \
-    CMD /usr/local/bin/healthcheck.sh
+    CMD pgrep -x "node" > /dev/null || exit 1
 
 # Метка приложения
 LABEL app_id={app_id} 

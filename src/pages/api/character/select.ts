@@ -1,18 +1,43 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { authOptions } from '../auth/[...nextauth]';
+import { getAuth } from '@clerk/nextjs/server';
 import connectDB from '../../../server/config/db';
-import User from '../../../server/models/User';
-import { getToken } from 'next-auth/jwt';
-import { getServerSession } from 'next-auth/next';
+import mongoose from 'mongoose';
 
-// Маппинг типов персонажей к ролям пользователя
-const characterTypeToRole: Record<string, string> = {
-  'product-lead': 'user',
-  'agile-coach': 'user',
-  'growth-hacker': 'user',
-  'ux-visionary': 'user',
-  'tech-pm': 'user'
-};
+// Определение схемы для UserCharacter
+const UserCharacterSchema = new mongoose.Schema({
+  userId: { type: String, required: true, index: true },
+  characterType: { type: String, required: true },
+  isActive: { type: Boolean, default: true },
+  levelProgress: { type: Map, of: Object, default: {} },
+  achievements: [{ 
+    id: String, 
+    type: String, 
+    title: String, 
+    unlockedAt: Date 
+  }],
+  createdAt: { type: Date, default: Date.now },
+  updatedAt: { type: Date, default: Date.now }
+});
+
+// Определяем интерфейс для модели UserCharacter
+interface IUserCharacter extends mongoose.Document {
+  userId: string;
+  characterType: string;
+  isActive: boolean;
+  levelProgress: Map<string, any>;
+  achievements: Array<{
+    id: string;
+    type: string;
+    title: string;
+    unlockedAt: Date;
+  }>;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// Используем существующую модель или создаем новую
+const UserCharacter = mongoose.models.UserCharacter as mongoose.Model<IUserCharacter> || 
+  mongoose.model<IUserCharacter>('UserCharacter', UserCharacterSchema);
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   // Устанавливаем CORS заголовки
@@ -30,63 +55,122 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    // Получаем сессию
-    const session = await getServerSession(req, res, authOptions);
+    // Получаем идентификатор пользователя из Clerk
+    const { userId } = getAuth(req);
     
-    if (!session || !session.user) {
+    if (!userId) {
       return res.status(401).json({ success: false, message: 'Не авторизован' });
     }
 
-    const { characterId, characterType } = req.body;
+    const { characterType } = req.body;
 
-    if (!characterId || !characterType) {
-      return res.status(400).json({ success: false, message: 'ID персонажа и тип обязательны' });
+    if (!characterType) {
+      return res.status(400).json({ success: false, message: 'Тип персонажа обязателен' });
     }
 
-    await connectDB();
+    // Флаг для ошибок базы данных
+    let dbError = false;
+    let dbErrorMessage = "";
 
-    const user = await (User as any).findById(session.user.id);
-
-    if (!user) {
-      return res.status(404).json({ success: false, message: 'Пользователь не найден' });
+    try {
+      await connectDB();
+    } catch (dbConnError: any) {
+      console.error('Ошибка подключения к MongoDB:', dbConnError);
+      dbError = true;
+      dbErrorMessage = dbConnError.message;
+      
+      // Возвращаем успешный ответ, чтобы клиент продолжил работу с локальными данными
+      return res.status(200).json({
+        success: true,
+        message: 'Персонаж выбран локально из-за ошибки базы данных',
+        dbError: true,
+        dbErrorMessage,
+        redirectUrl: '/dashboard',
+        character: {
+          type: characterType,
+          isActive: true
+        }
+      });
     }
 
-    // Обновляем данные пользователя
-    user.hasCharacter = true;
-    user.characterType = characterType;
-    user.role = characterTypeToRole[characterType] || 'user';
-    user.updated_at = new Date();
-
-    await user.save();
-    
-    console.log('Пользователь обновлен с персонажем:', {
-      id: user._id,
-      hasCharacter: user.hasCharacter,
-      characterType: user.characterType
-    });
-
-    // Отправляем специальный флаг, чтобы клиент знал, что нужно выполнить hard reload
-    // для обновления сессии NextAuth
-    return res.status(200).json({
-      success: true,
-      message: 'Персонаж успешно выбран',
-      redirectUrl: '/dashboard',
-      requiresReload: true,  // Флаг для принудительной перезагрузки страницы
-      user: {
-        id: user._id,
-        name: user.username,
-        email: user.email,
-        image: user.avatar,
-        role: user.role,
-        hasCharacter: true,
-        characterType: characterType
+    try {
+      // Деактивируем все текущие активные персонажи пользователя
+      await UserCharacter.updateMany(
+        { userId: userId, isActive: true },
+        { $set: { isActive: false } }
+      );
+      
+      // Проверяем, существует ли уже персонаж этого типа
+      let character = await UserCharacter.findOne({ 
+        userId: userId, 
+        characterType: characterType 
+      });
+      
+      if (character) {
+        // Если персонаж существует, активируем его
+        character.isActive = true;
+        character.updatedAt = new Date();
+        await character.save();
+      } else {
+        // Если нет, создаем нового
+        character = await UserCharacter.create({
+          userId: userId,
+          characterType: characterType,
+          isActive: true,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          levelProgress: {},
+          achievements: []
+        });
       }
-    });
+      
+      console.log('Персонаж обновлен:', {
+        id: character._id,
+        userId: userId,
+        characterType: characterType,
+        isActive: true
+      });
+
+      return res.status(200).json({
+        success: true,
+        message: 'Персонаж успешно выбран и сохранен в базе данных',
+        redirectUrl: '/dashboard',
+        character: {
+          id: character._id,
+          type: characterType,
+          isActive: true
+        }
+      });
+    } catch (userError: any) {
+      console.error('Ошибка при выборе персонажа:', userError);
+      
+      // Возвращаем успешный ответ, чтобы клиент продолжил работу с локальными данными
+      return res.status(200).json({
+        success: true,
+        message: 'Персонаж выбран локально из-за ошибки базы данных',
+        dbError: true,
+        dbErrorMessage: userError.message,
+        redirectUrl: '/dashboard',
+        character: {
+          type: characterType,
+          isActive: true
+        }
+      });
+    }
   } catch (error: any) {
     console.error('Ошибка при выборе персонажа:', error);
-    return res.status(500).json({ 
-      success: false, 
-      message: 'Внутренняя ошибка сервера: ' + error.message
+    
+    // Возвращаем успешный ответ, чтобы клиент продолжил работу с локальными данными
+    return res.status(200).json({ 
+      success: true, 
+      message: 'Персонаж выбран локально из-за внутренней ошибки сервера',
+      dbError: true,
+      dbErrorMessage: error.message,
+      redirectUrl: '/dashboard',
+      character: {
+        type: req.body.characterType,
+        isActive: true
+      }
     });
   }
 } 

@@ -252,7 +252,7 @@ const UXAnalysisTheory: React.FC<UXAnalysisTheoryProps> = ({ onComplete }) => {
 
     // Шаг 5: UX-инструменты
     <div key="tools" className={styles.section}>
-      // ... existing code ...
+      {/* ... existing code ... */}
     </div>
   ];
 

@@ -8,6 +8,17 @@ const nextConfig = {
     domains: ['localhost'],
     unoptimized: true, // Отключаем оптимизацию для простоты работы в Docker
   },
+  // Отключаем генерацию статических страниц для страниц, требующих Clerk
+  output: 'export',
+  experimental: {
+    appDir: false,
+  },
+  // Исключаем пути с Clerk из статической генерации
+  exportPathMap: async function () {
+    return {
+      '/': { page: '/' }
+    }
+  },
   // Настройки для безопасности
   headers: async () => {
     return [

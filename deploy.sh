@@ -1,5 +1,5 @@
 #!/bin/bash
-# Скрипт для деплоя проекта на Timeweb (упрощенная версия)
+# Скрипт для деплоя проекта на Timeweb с Clerk Auth
 
 # Переменные (замените на свои)
 SERVER_USER="cf68523"
@@ -13,7 +13,20 @@ YELLOW='\033[1;33m'
 RED='\033[0;31m'
 NC='\033[0m' # No Color
 
-echo -e "${GREEN}Начинаем процесс деплоя на Timeweb...${NC}"
+echo -e "${GREEN}Начинаем процесс деплоя на Timeweb с интеграцией Clerk...${NC}"
+
+# Проверка наличия Clerk переменных окружения
+if [ -z "$NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY" ]; then
+  echo -e "${RED}Ошибка: Не установлена переменная NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY${NC}"
+  echo -e "${YELLOW}Установите её для этого сеанса: export NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=ваш_ключ${NC}"
+  exit 1
+fi
+
+if [ -z "$CLERK_SECRET_KEY" ]; then
+  echo -e "${RED}Ошибка: Не установлена переменная CLERK_SECRET_KEY${NC}"
+  echo -e "${YELLOW}Установите её для этого сеанса: export CLERK_SECRET_KEY=ваш_ключ${NC}"
+  exit 1
+fi
 
 # 1. Сборка проекта
 echo -e "${YELLOW}Шаг 1: Сборка проекта...${NC}"
@@ -36,7 +49,18 @@ cp -r pages deploy-full/       # Страницы Next.js (если они на�
 cp -r components deploy-full/  # Компоненты (если они находятся в корне, а не в src)
 cp -r styles deploy-full/      # Стили (если они находятся в корне, а не в src)
 cp package.json package-lock.json next.config.js deploy-full/ 2>/dev/null || true
-cp .env.production deploy-full/.env 2>/dev/null || true
+
+# Создаем .env файл с переменными окружения для Clerk
+cat > deploy-full/.env << EOF
+NODE_ENV=production
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}
+CLERK_SECRET_KEY=${CLERK_SECRET_KEY}
+NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in
+NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up
+NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL=/dashboard
+NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL=/character/select
+MONGODB_URI=${MONGODB_URI:-mongodb://localhost:27017/gotogrow}
+EOF
 
 # Создание .htaccess файла для Apache
 cat > deploy-full/.htaccess << EOF
@@ -86,8 +110,8 @@ echo -e "3. Настроить Node.js в панели управления Time
 echo -e "4. Установить зависимости: npm install --production"
 echo -e "5. Запустить приложение: npm start"
 echo -e ""
-echo -e "${RED}Важно:${NC} Для полноценной работы Next.js приложения с API маршрутами"
-echo -e "на шаред-хостинге может потребоваться использование VPS/VDS с Node.js"
+echo -e "${RED}Важно:${NC} Убедитесь, что на сервере установлены все переменные окружения для Clerk"
+echo -e "Вы также можете настроить веб-хуки Clerk для синхронизации пользователей с MongoDB"
 
 # Очистка временных файлов
 rm -rf deploy-full

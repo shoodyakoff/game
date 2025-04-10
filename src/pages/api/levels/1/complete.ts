@@ -1,14 +1,13 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '../../auth/[...nextauth]';
+import { getAuth } from '@clerk/nextjs/server';
 
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
-  // Проверка авторизации
-  const session = await getServerSession(req, res, authOptions);
-  if (!session) {
+  // Проверка авторизации через Clerk
+  const { userId, sessionId } = getAuth(req);
+  if (!userId) {
     return res.status(401).json({ error: 'Необходима авторизация' });
   }
 
@@ -18,7 +17,7 @@ export default async function handler(
   }
 
   try {
-    const { finalDecision, timeSpent } = req.body;
+    const { finalDecision, timeSpent, characterType } = req.body;
 
     // Проверяем обязательные поля
     if (!finalDecision) {
@@ -27,7 +26,7 @@ export default async function handler(
 
     // В реальной реализации здесь мы бы обновляли статус уровня и выдавали награды в базе данных
     // Сейчас просто имитируем успешное завершение
-    console.log(`Завершение уровня 1 для пользователя ${session.user.email}. Решение: ${finalDecision}, время: ${timeSpent || 'не указано'}`);
+    console.log(`Завершение уровня 1 для пользователя ${userId}. Решение: ${finalDecision}, время: ${timeSpent || 'не указано'}`);
     
     // Определяем награды на основе принятого решения и типа персонажа
     // В реальной реализации это была бы более сложная логика
@@ -37,9 +36,9 @@ export default async function handler(
     let nextLevelUnlocked = true;
     
     // В реальной реализации здесь мы бы проверяли соответствие выбранного решения типу персонажа
-    if ((req.body.characterType === 'ux-visionary' && finalDecision === 'ux_focused') ||
-        (req.body.characterType === 'growth-hacker' && finalDecision === 'data_driven') ||
-        (req.body.characterType === 'product-lead' && finalDecision === 'balanced')) {
+    if ((characterType === 'ux-visionary' && finalDecision === 'ux_focused') ||
+        (characterType === 'growth-hacker' && finalDecision === 'data_driven') ||
+        (characterType === 'product-lead' && finalDecision === 'balanced')) {
       // Бонус за выбор подходящего для персонажа решения
       experience += 50;
       itemReward = "Улучшенная заметка";

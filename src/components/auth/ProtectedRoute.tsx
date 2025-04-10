@@ -1,64 +1,23 @@
-import { useEffect, useState } from 'react';
+import React from 'react';
+import { useUser } from '@clerk/nextjs';
 import { useRouter } from 'next/router';
-import { useSession } from 'next-auth/react';
-
-interface ProtectedRouteProps {
-  children: React.ReactNode;
-  requireCharacter?: boolean;
-}
+import { useEffect } from 'react';
 
 /**
- * Компонент для защиты маршрутов, требующих авторизации
- * Перенаправляет неавторизованных пользователей на страницу входа
- * и сохраняет исходный URL для возврата после авторизации
+ * Компонент-обертка для защищенных маршрутов.
+ * Проверяет аутентификацию пользователя и выбор персонажа,
+ * но в основном используется как заглушка, так как 
+ * аутентификация происходит через middleware Clerk.
  */
-const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ 
+const ProtectedRoute: React.FC<{ 
+  children: React.ReactNode;
+  requireCharacter?: boolean;
+}> = ({ 
   children,
   requireCharacter = false
 }) => {
-  const router = useRouter();
-  const { data: session, status } = useSession();
-  const loading = status === 'loading';
-  const isAuthenticated = status === 'authenticated';
-  
-  // Отслеживаем, произошла ли проверка аутентификации
-  const [isVerified, setIsVerified] = useState(false);
-
-  // Используем hasCharacter из сессии NextAuth, если доступен
-  const hasCharacter = session?.user?.hasCharacter || false;
-
-  // Выполняем проверку аутентификации
-  useEffect(() => {
-    if (status !== 'loading') {
-      setIsVerified(true);
-    }
-  }, [status]);
-
-  // Выполняем перенаправление, если необходимо
-  useEffect(() => {
-    if (!isVerified) return;
-
-    if (!isAuthenticated) {
-      // Сохраняем текущий URL для возврата после авторизации
-      const currentPath = encodeURIComponent(router.asPath);
-      router.push(`/auth/login?callbackUrl=${currentPath}`);
-    } else if (requireCharacter && !hasCharacter && router.pathname !== '/character/select') {
-      // Если требуется персонаж, но он не выбран, перенаправляем на страницу выбора
-      // И проверяем, что мы не находимся уже на странице выбора персонажа
-      router.push('/character/select');
-    }
-  }, [isAuthenticated, requireCharacter, hasCharacter, router, isVerified]);
-
-  // Показываем загрузчик во время проверки аутентификации
-  if (loading || !isVerified || (!isAuthenticated || (requireCharacter && !hasCharacter))) {
-    return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
-        <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-      </div>
-    );
-  }
-
-  // Если пользователь аутентифицирован, показываем содержимое страницы
+  // Используется только для проверки на клиенте
+  // Основная защита происходит через middleware
   return <>{children}</>;
 };
 

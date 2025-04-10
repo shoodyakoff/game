@@ -1,17 +1,17 @@
-import { useSelector, useDispatch } from 'react-redux';
+import { useSelector } from 'react-redux';
 import { NextPage } from 'next';
 import Head from 'next/head';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { useState, useEffect } from 'react';
+import { useUser, useClerk } from '@clerk/nextjs';
 
 import ProtectedRoute from '../../components/auth/ProtectedRoute';
 import { RootState } from '../../store';
-import { logout } from '../../store/slices/authSlice';
 
 const Games: NextPage = () => {
-  const dispatch = useDispatch();
-  const { user } = useSelector((state: RootState) => state.auth);
+  const { user, isLoaded, isSignedIn } = useUser();
+  const { signOut } = useClerk();
   const [isClient, setIsClient] = useState(false);
   
   useEffect(() => {
@@ -20,7 +20,7 @@ const Games: NextPage = () => {
   }, []);
   
   const handleLogout = () => {
-    dispatch(logout());
+    signOut();
   };
   
   const games = [
@@ -80,27 +80,27 @@ const Games: NextPage = () => {
             <nav className="hidden md:block">
               <ul className="flex space-x-4">
                 <li>
-                  <Link href="/dashboard" legacyBehavior>
-                    <a className="nav-link">Прогресс</a>
+                  <Link href="/dashboard" className="nav-link">
+                    Прогресс
                   </Link>
                 </li>
                 <li>
-                  <Link href="/levels" legacyBehavior>
-                    <a className="nav-link-active">Играть</a>
+                  <Link href="/levels" className="nav-link-active">
+                    Играть
                   </Link>
                 </li>
                 <li>
-                  <Link href="/profile" legacyBehavior>
-                    <a className="nav-link">Профиль</a>
+                  <Link href="/profile" className="nav-link">
+                    Профиль
                   </Link>
                 </li>
               </ul>
             </nav>
             
             <div className="flex items-center space-x-4">
-              {isClient && user && (
+              {isClient && isSignedIn && (
                 <span className="text-sm text-slate-300 hidden md:inline-block">
-                  Привет, {user?.username || user?.email}
+                  Привет, {user?.firstName || user?.emailAddresses[0]?.emailAddress}
                 </span>
               )}
               <button 
@@ -119,13 +119,13 @@ const Games: NextPage = () => {
             <div className="md:w-1/4">
               <div className="card mb-6">
                 <div className="flex items-center mb-4">
-                  {isClient && user ? (
+                  {isClient && isSignedIn ? (
                     <>
                       <div className="w-12 h-12 bg-indigo-600 rounded-full flex items-center justify-center mr-3">
-                        <span className="text-lg font-bold text-white">{user.username?.charAt(0) || user.email?.charAt(0)}</span>
+                        <span className="text-lg font-bold text-white">{user?.firstName?.charAt(0) || user?.emailAddresses[0]?.emailAddress?.charAt(0)}</span>
                       </div>
                       <div>
-                        <h3 className="font-bold text-white">{user.username || user.email}</h3>
+                        <h3 className="font-bold text-white">{user?.firstName || user?.emailAddresses[0]?.emailAddress}</h3>
                         <p className="text-slate-400 text-sm">Игрок</p>
                       </div>
                     </>
@@ -146,44 +146,48 @@ const Games: NextPage = () => {
                   <h4 className="text-sm uppercase text-slate-500 font-medium tracking-wider mb-3">Навигация</h4>
                   <ul className="space-y-2">
                     <li>
-                      <Link href="/dashboard" legacyBehavior>
-                        <a className="flex items-center text-slate-300 rounded-lg p-2 hover:bg-slate-700 transition-colors">
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-                          </svg>
-                          Дашборд
-                        </a>
+                      <Link 
+                        href="/dashboard" 
+                        className="flex items-center text-slate-300 rounded-lg p-2 hover:bg-slate-700 transition-colors"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                        </svg>
+                        Дашборд
                       </Link>
                     </li>
                     <li>
-                      <Link href="/games" legacyBehavior>
-                        <a className="flex items-center text-white bg-slate-700 rounded-lg p-2 hover:bg-slate-600 transition-colors">
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                          </svg>
-                          Мои игры
-                        </a>
+                      <Link 
+                        href="/games" 
+                        className="flex items-center text-white bg-slate-700 rounded-lg p-2 hover:bg-slate-600 transition-colors"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                        </svg>
+                        Мои игры
                       </Link>
                     </li>
                     <li>
-                      <Link href="/profile" legacyBehavior>
-                        <a className="flex items-center text-slate-300 rounded-lg p-2 hover:bg-slate-700 transition-colors">
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                          </svg>
-                          Профиль
-                        </a>
+                      <Link 
+                        href="/profile" 
+                        className="flex items-center text-slate-300 rounded-lg p-2 hover:bg-slate-700 transition-colors"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                        </svg>
+                        Профиль
                       </Link>
                     </li>
                     <li>
-                      <Link href="/settings" legacyBehavior>
-                        <a className="flex items-center text-slate-300 rounded-lg p-2 hover:bg-slate-700 transition-colors">
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                          </svg>
-                          Настройки
-                        </a>
+                      <Link 
+                        href="/settings" 
+                        className="flex items-center text-slate-300 rounded-lg p-2 hover:bg-slate-700 transition-colors"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                        Настройки
                       </Link>
                     </li>
                   </ul>
@@ -300,13 +304,14 @@ const Games: NextPage = () => {
                         <span className="text-slate-400 text-sm">
                           <span className="text-emerald-500 font-medium">{game.players}</span> игроков онлайн
                         </span>
-                        <Link href={`/games/${game.id}`} legacyBehavior>
-                          <a className="inline-flex items-center px-3 py-1 bg-indigo-600 hover:bg-indigo-700 text-white text-sm rounded-lg transition-colors">
-                            Играть
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                            </svg>
-                          </a>
+                        <Link 
+                          href={`/games/${game.id}`} 
+                          className="inline-flex items-center px-3 py-1 bg-indigo-600 hover:bg-indigo-700 text-white text-sm rounded-lg transition-colors"
+                        >
+                          Играть
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                          </svg>
                         </Link>
                       </div>
                     </div>
@@ -324,14 +329,14 @@ const Games: NextPage = () => {
                 <p className="text-sm text-slate-400">© 2023 GOTOGROW. Все права защищены.</p>
               </div>
               <div className="flex space-x-4">
-                <Link href="/privacy" legacyBehavior>
-                  <a className="text-sm text-slate-400 hover:text-white">Политика конфиденциальности</a>
+                <Link href="/privacy" className="text-sm text-slate-400 hover:text-white">
+                  Политика конфиденциальности
                 </Link>
-                <Link href="/terms" legacyBehavior>
-                  <a className="text-sm text-slate-400 hover:text-white">Условия использования</a>
+                <Link href="/terms" className="text-sm text-slate-400 hover:text-white">
+                  Условия использования
                 </Link>
-                <Link href="/help" legacyBehavior>
-                  <a className="text-sm text-slate-400 hover:text-white">Помощь</a>
+                <Link href="/help" className="text-sm text-slate-400 hover:text-white">
+                  Помощь
                 </Link>
               </div>
             </div>

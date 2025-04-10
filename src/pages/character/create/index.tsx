@@ -4,15 +4,15 @@ import Head from 'next/head';
 import { useSelector } from 'react-redux';
 import { motion } from 'framer-motion';
 import axios from 'axios';
-import { getMe } from '../../../store/slices/authSlice';
 import type { RootState } from '../../../store';
 import { useAppDispatch } from '../../../store/hooks';
+import { useUser } from '@clerk/nextjs';
 
 // Заглушка для страницы создания персонажа
 export default function CreateCharacter() {
   const router = useRouter();
   const dispatch = useAppDispatch();
-  const { user, token } = useSelector((state: RootState) => state.auth);
+  const { user, isSignedIn, isLoaded } = useUser();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -26,18 +26,10 @@ export default function CreateCharacter() {
       // Сейчас просто обновляем флаг hasCharacter у пользователя
       await axios.post(
         '/api/character/create',
-        { /* здесь будут данные персонажа */ },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        }
+        { /* здесь будут данные персонажа */ }
       );
 
-      // Обновляем данные пользователя
-      await dispatch(getMe());
-
-      // Перенаправляем на dashboard
+      // Перенаправляем на dashboard после создания персонажа
       router.push('/dashboard');
     } catch (error: any) {
       console.error('Ошибка создания персонажа:', error);

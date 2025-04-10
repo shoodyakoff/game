@@ -1,11 +1,11 @@
-import { useSelector, useDispatch } from 'react-redux';
+import { useSelector } from 'react-redux';
 import { NextPage } from 'next';
 import Head from 'next/head';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
-import { useSession } from 'next-auth/react';
+import { useUser } from '@clerk/nextjs';
 
 import ProtectedRoute from '../../components/auth/ProtectedRoute';
 import { RootState } from '../../store';
@@ -16,47 +16,28 @@ import Header from '../../components/layout/Header';
 
 const Levels: NextPage = () => {
   const router = useRouter();
-  const dispatch = useDispatch();
-  const { user } = useSelector((state: RootState) => state.auth);
   const selectedCharacter = useSelector(selectSelectedCharacter);
   const [isClient, setIsClient] = useState(false);
   const [userInfo, setUserInfo] = useState<any>(null);
   const [selectedCharacterInfo, setSelectedCharacterInfo] = useState<any>(null);
-  const { data: session } = useSession();
+  const { user, isSignedIn, isLoaded } = useUser();
   
   useEffect(() => {
     // Указываем, что мы находимся на клиенте
     setIsClient(true);
     
-    if (typeof window !== 'undefined') {
-      // Получаем информацию о пользователе из localStorage
-      const userInfo = localStorage.getItem('user');
-      if (userInfo) {
-        setUserInfo(JSON.parse(userInfo));
-      }
-      
-      // Получаем информацию о выбранном персонаже из localStorage
-      const character = localStorage.getItem('selectedCharacter');
-      if (character) {
-        setSelectedCharacterInfo(JSON.parse(character));
-      }
+    // Получаем данные о персонаже из Redux
+    if (selectedCharacter) {
+      setSelectedCharacterInfo(selectedCharacter);
     }
-  }, []); // Пустой массив зависимостей, чтобы эффект выполнился только один раз
+  }, [selectedCharacter]); 
   
   // Отдельный эффект для редиректа
   useEffect(() => {
-    if (isClient && selectedCharacterInfo === null && selectedCharacter === null) {
-      router.push('/character?redirectTo=/levels');
+    if (isClient && isLoaded && !isSignedIn && !selectedCharacterInfo) {
+      router.push('/character/select?redirectTo=/levels');
     }
-  }, [isClient, selectedCharacterInfo, selectedCharacter, router]);
-  
-  useEffect(() => {
-    if (isClient) {
-      if (!selectedCharacterInfo && selectedCharacter) {
-        router.push('/character');
-      }
-    }
-  }, [isClient, selectedCharacterInfo, selectedCharacter, router]);
+  }, [isClient, selectedCharacterInfo, isSignedIn, isLoaded, router]);
   
   // Функция для получения статуса пройденности уровня
   const resetLevelProgress = (levelId: string) => {
@@ -277,17 +258,18 @@ const Levels: NextPage = () => {
                           </button>
                         )}
                         {level.unlocked ? (
-                          <Link href={`/levels/${level.id}`} legacyBehavior>
-                            <a className={`inline-flex items-center text-sm ${
+                          <Link 
+                            href={`/levels/${level.id}`} 
+                            className={`inline-flex items-center text-sm ${
                               level.completed 
                                 ? 'bg-indigo-800 hover:bg-indigo-900' 
                                 : 'bg-indigo-600 hover:bg-indigo-700'
-                            } text-white px-3 py-1.5 rounded-lg transition-colors`}>
-                              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
-                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
-                              </svg>
-                              {level.completed ? 'Играть снова' : 'Начать уровень'}
-                            </a>
+                            } text-white px-3 py-1.5 rounded-lg transition-colors`}
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
+                            </svg>
+                            {level.completed ? 'Играть снова' : 'Начать уровень'}
                           </Link>
                         ) : (
                           <button 

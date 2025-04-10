@@ -1,76 +1,85 @@
+/**
+ * MongoDB клиент для прямого доступа к базе данных
+ * Этот файл предоставляет клиент MongoDB для использования 
+ * в API-маршрутах и других серверных функциях
+ */
 import { MongoClient } from 'mongodb';
+import connectDB from './db';
 
-const uri = process.env.MONGODB_URI || 'mongodb://localhost:27017/dummy-db';
+// Используем те же параметры, что и в основном connectDB
+const MONGODB_URI = process.env.MONGODB_URI || 
+                   process.env.MONGO_URI || 
+                   'mongodb://localhost:27017/game-portal';
+
+// Типизация для глобальных переменных
+declare global {
+  var _mongoClientPromise: Promise<MongoClient> | undefined;
+}
+
+// Опции подключения для native MongoDB driver
 const options = {
-  connectTimeoutMS: 10000, // 10 seconds
-  socketTimeoutMS: 45000,  // 45 seconds
+  connectTimeoutMS: 10000,
+  socketTimeoutMS: 45000
 };
 
-let client;
+// Результат, который будет экспортирован
 let clientPromise: Promise<MongoClient>;
 
-// Если установлен флаг пропуска проверки MongoDB, возвращаем заглушку
+// Используем режим пропуска проверки, если включен
 if (process.env.SKIP_MONGODB_CHECK === 'true') {
-  console.log('SKIP_MONGODB_CHECK=true: Используется фиктивное подключение к MongoDB');
-  // Создаем фиктивный клиент MongoDB для режима без БД
-  class MockMongoClient {
-    constructor() {}
-    connect() { return this; }
-    db() { return {}; }
-    close() {}
-  }
+  console.log('MongoDB: SKIP_MONGODB_CHECK=true, используем заглушку клиента MongoDB');
   
-  const mockClient = new MockMongoClient() as unknown as MongoClient;
+  // Создаем заглушку клиента MongoDB
+  const mockClient = {
+    connect: () => Promise.resolve(mockClient),
+    db: () => ({}),
+    close: () => {}
+  } as unknown as MongoClient;
+  
   clientPromise = Promise.resolve(mockClient);
 } else if (process.env.NODE_ENV === 'development') {
-  // В development режиме используем глобальную переменную для сохранения соединения
-  let globalWithMongo = global as typeof globalThis & {
-    _mongoClientPromise?: Promise<MongoClient>;
-  };
-
-  if (!globalWithMongo._mongoClientPromise) {
-    client = new MongoClient(uri, options);
-    globalWithMongo._mongoClientPromise = client.connect()
+  // В режиме разработки кешируем соединение в глобальной переменной
+  // для поддержки горячей перезагрузки (HMR)
+  if (!global._mongoClientPromise) {
+    // Создаем клиент
+    const client = new MongoClient(MONGODB_URI, options);
+    
+    // Сначала пытаемся подключиться через Mongoose (основной файл db.ts)
+    // чтобы поддерживать синхронизацию соединений
+    global._mongoClientPromise = connectDB()
+      .then(() => {
+        console.log('MongoDB: Используем соединение после Mongoose');
+        return client.connect();
+      })
       .catch(error => {
-        console.error('MongoDB connection error in development:', {
+        console.error('MongoDB: Ошибка подключения:', {
           name: error.name,
           message: error.message,
           code: error.code
         });
-        
-        // Создаем фиктивный клиент MongoDB при ошибке
-        const mockClient = {
-          connect: () => Promise.resolve(mockClient),
-          db: () => ({}),
-          close: () => {}
-        } as unknown as MongoClient;
-        
-        return mockClient;
+        throw error;
       });
   }
-  clientPromise = globalWithMongo._mongoClientPromise;
+  
+  clientPromise = global._mongoClientPromise;
 } else {
-  // В production создаем новое соединение с обработкой ошибок
-  client = new MongoClient(uri, options);
-  clientPromise = client.connect()
+  // В продакшене создаем новый клиент (будет вызываться один раз на запрос)
+  const client = new MongoClient(MONGODB_URI, options);
+  
+  clientPromise = connectDB()
+    .then(() => {
+      console.log('MongoDB: Подключаемся к базе в режиме production');
+      return client.connect();
+    })
     .catch(error => {
-      console.error('MongoDB connection error in production:', {
+      console.error('MongoDB: Ошибка при подключении:', {
         name: error.name,
         message: error.message,
-        code: error.code,
-        uri: uri.replace(/\/\/[^:]+:[^@]+@/, '//***:***@') // Маскируем credentials
+        code: error.code
       });
-      
-      // Создаем фиктивный клиент MongoDB при ошибке в продакшене
-      const mockClient = {
-        connect: () => Promise.resolve(mockClient),
-        db: () => ({}),
-        close: () => {}
-      } as unknown as MongoClient;
-      
-      return mockClient;
+      throw error;
     });
 }
 
-// Экспортируем промис с подключением
+// Только ES Module экспорт
 export default clientPromise; 

@@ -1,11 +1,18 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useRouter } from 'next/router';
-import { useSession } from 'next-auth/react';
+import { useUser } from '@clerk/nextjs';
 import axios from 'axios';
 import { selectCharacter } from '../../store/slices/characterSlice';
 import { RootState } from '../../store';
-import { updateCharacterSelection, safeRedirect } from '../../lib/session';
+
+// Функция для безопасного перенаправления
+const safeRedirect = (router: any, url: string) => {
+  router.push(url).catch((err: any) => {
+    console.error('Ошибка перенаправления:', err);
+    window.location.href = url;
+  });
+};
 
 // Создаём собственную кнопку, так как компонент Button не найден
 const Button: React.FC<{
@@ -140,7 +147,7 @@ export const CharacterSelect: React.FC = () => {
   const router = useRouter();
   const { redirectTo } = router.query; 
   const currentCharacter = useSelector((state: RootState) => state.character.selectedCharacter);
-  const { data: session } = useSession();
+  const { user, isSignedIn } = useUser();
   const isMounted = useRef(true);
 
   // Устанавливаем флаг монтирования
@@ -203,7 +210,7 @@ export const CharacterSelect: React.FC = () => {
     }
     
     try {
-      if (!session || !session.user) {
+      if (!isSignedIn || !user) {
         if (isMounted.current) {
           setError('Необходимо авторизоваться для выбора персонажа');
           setIsLoading(false);
@@ -211,9 +218,6 @@ export const CharacterSelect: React.FC = () => {
         return;
       }
 
-      // Сохраняем в Redux
-      dispatch(selectCharacter(character));
-      
       // Показываем, что начали процесс перенаправления
       if (isMounted.current) {
         setIsRedirecting(true);
@@ -248,42 +252,26 @@ export const CharacterSelect: React.FC = () => {
       if (response.data.success) {
         console.log('Персонаж успешно выбран, ответ сервера:', response.data);
         
-        // Если сервер просит нас сделать принудительную перезагрузку
-        if (response.data.requiresReload) {
-          console.log('Выполняется принудительное обновление страницы для обновления сессии...');
-          
-          // Устанавливаем cookie с path='/', чтобы middleware мог его прочитать
-          document.cookie = 'just_selected_character=true; path=/; max-age=60'; // живет 60 секунд
-          console.log('Cookie установлен: just_selected_character=true');
-          
-          // Устанавливаем целевой URL в sessionStorage
-          window.sessionStorage.setItem('redirectAfterReload', '/dashboard');
-          
-          // Принудительно перезагружаем страницу для обновления сессии
-          console.log('Переход на /dashboard с перезагрузкой страницы');
-          window.location.href = '/dashboard';
-          return;
-        }
+        // После успешного сохранения на сервере обновляем Redux store
+        dispatch(selectCharacter(character));
         
-        // Обычное перенаправление, если не требуется перезагрузка
-        console.log('Стандартное перенаправление на /dashboard');
-        safeRedirect('/dashboard');
+        // Определяем, куда перенаправлять пользователя
+        const destination = redirectTo && typeof redirectTo === 'string'
+          ? redirectTo
+          : '/dashboard';
+          
+        // Перенаправляем пользователя
+        safeRedirect(router, destination);
       } else {
-        throw new Error(response.data.message || 'Неизвестная ошибка при выборе персонажа');
+        throw new Error(response.data.message || 'Неизвестная ошибка');
       }
     } catch (err: any) {
-      // Проверяем, не был ли запрос отменен из-за размонтирования
-      if (err.name === 'CanceledError' || err.name === 'AbortError') {
-        console.log('Запрос на выбор персонажа был отменен');
-        return;
-      }
-      
-      console.error('Ошибка при выборе персонажа:', err);
-      
+      // Обрабатываем ошибки только если компонент не размонтирован
       if (isMounted.current) {
-        setError(err.message || 'Произошла ошибка при сохранении персонажа');
-        setIsRedirecting(false);
+        console.error('Ошибка при выборе персонажа:', err);
+        setError(err.message || 'Произошла ошибка при выборе персонажа');
         setIsLoading(false);
+        setIsRedirecting(false);
       }
     }
   };

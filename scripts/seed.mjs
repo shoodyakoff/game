@@ -3,9 +3,10 @@
  * Запуск: node scripts/seed.js
  */
 
-const mongoose = require('mongoose');
-const bcrypt = require('bcryptjs');
-const connectDB = require('../src/server/config/db');
+import mongoose from 'mongoose';
+import bcrypt from 'bcryptjs';
+import connectDB from '../src/server/config/db.js';
+import User from '../src/server/models/User.js';
 
 // Создаем тестовые данные для пользователей
 const seedUsers = [
@@ -35,9 +36,6 @@ async function seedDatabase() {
     
     // Подключаемся к базе данных
     await connectDB();
-    
-    // Импортируем модели
-    const User = require('../src/server/models/User');
     
     // Очищаем текущие коллекции
     console.log('🗑️ Очистка существующих данных...');
