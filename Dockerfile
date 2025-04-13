@@ -41,7 +41,7 @@ COPY . .
 RUN echo "JWT_SECRET=dummy-build-jwt\nMONGODB_URI=mongodb://localhost:27017/dummy-db\nNEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=dummy_key\nCLERK_SECRET_KEY=dummy_key" > .env.build
 
 # Сборка приложения
-RUN NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_dummy CLERK_SECRET_KEY=sk_test_dummy npm run build || exit 0
+RUN NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_dummy CLERK_SECRET_KEY=sk_test_dummy npm run build
 
 # Очистка и установка только production зависимостей
 RUN rm -rf node_modules && \
