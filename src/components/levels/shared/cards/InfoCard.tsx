@@ -87,7 +87,11 @@ const sizeStyles = {
 };
 
 const animationVariants = {
-  none: {},
+  none: {
+    initial: {},
+    animate: {},
+    transition: {}
+  },
   fade: {
     initial: { opacity: 0 },
     animate: { opacity: 1 },
