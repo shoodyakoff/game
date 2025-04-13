@@ -47,14 +47,10 @@ const Profile: NextPage = () => {
     email: '',
     fullName: '',
     bio: '',
-    currentPassword: '',
-    newPassword: '',
-    confirmPassword: '',
   });
   
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
-  const [activeTab, setActiveTab] = useState('profile');
   
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -96,74 +92,6 @@ const Profile: NextPage = () => {
     }
   };
   
-  const handlePasswordUpdate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (formData.newPassword !== formData.confirmPassword) {
-      setMessage({ 
-        type: 'error', 
-        text: 'Новый пароль и подтверждение не совпадают' 
-      });
-      return;
-    }
-    
-    if (formData.newPassword.length < 8) {
-      setMessage({ 
-        type: 'error', 
-        text: 'Пароль должен содержать минимум 8 символов' 
-      });
-      return;
-    }
-    
-    // Проверка наличия цифры и специального символа
-    const hasNumber = /\d/.test(formData.newPassword);
-    const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(formData.newPassword);
-    
-    if (!hasNumber || !hasSpecial) {
-      setMessage({ 
-        type: 'error', 
-        text: 'Пароль должен содержать хотя бы одну цифру и один специальный символ' 
-      });
-      return;
-    }
-    
-    setIsLoading(true);
-    
-    try {
-      // Используем API Clerk для смены пароля
-      if (user) {
-        // Получаем существующий пароль у пользователя через персональный URL
-        const userProfile = await fetch('/api/clerk/user-profile');
-        const passwordResetLink = `https://accounts.clerk.com/user/password/reset?__clerk_ticket=${user.id}`;
-        
-        setMessage({ 
-          type: 'success', 
-          text: 'Для смены пароля используйте личный кабинет Clerk. Мы отправили вам ссылку на почту.' 
-        });
-      }
-      
-      setFormData(prev => ({
-        ...prev,
-        currentPassword: '',
-        newPassword: '',
-        confirmPassword: '',
-      }));
-    } catch (error: any) {
-      console.error('Ошибка обновления пароля:', error);
-      setMessage({
-        type: 'error',
-        text: error.message || 'Произошла ошибка при обновлении пароля'
-      });
-    } finally {
-      setIsLoading(false);
-      
-      // Сбрасываем сообщение через 3 секунды
-      setTimeout(() => {
-        setMessage({ type: '', text: '' });
-      }, 3000);
-    }
-  };
-  
   return (
     <ProtectedRoute>
       <div className="min-h-screen bg-slate-900">
@@ -184,20 +112,6 @@ const Profile: NextPage = () => {
               <div className="card mb-6">
                 <div className="flex justify-between items-center mb-6">
                   <h2 className="text-xl font-bold">Настройки профиля</h2>
-                  <div className="flex space-x-2">
-                    <button 
-                      onClick={() => setActiveTab('profile')}
-                      className={`px-4 py-2 rounded-lg ${activeTab === 'profile' ? 'bg-indigo-600 text-white' : 'bg-slate-700 text-slate-300'}`}
-                    >
-                      Профиль
-                    </button>
-                    <button 
-                      onClick={() => setActiveTab('security')}
-                      className={`px-4 py-2 rounded-lg ${activeTab === 'security' ? 'bg-indigo-600 text-white' : 'bg-slate-700 text-slate-300'}`}
-                    >
-                      Безопасность
-                    </button>
-                  </div>
                 </div>
                 
                 {message.text && (
@@ -214,81 +128,15 @@ const Profile: NextPage = () => {
                   </motion.div>
                 )}
                 
-                {activeTab === 'profile' ? (
-                  <form onSubmit={handleProfileUpdate} className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label htmlFor="name" className="form-label">Имя пользователя</label>
-                        <input
-                          type="text"
-                          id="name"
-                          name="name"
-                          value={formData.name}
-                          onChange={handleChange}
-                          className="input-field"
-                          required
-                        />
-                      </div>
-                      
-                      <div>
-                        <label htmlFor="email" className="form-label">Email</label>
-                        <input
-                          type="email"
-                          id="email"
-                          name="email"
-                          value={formData.email}
-                          onChange={handleChange}
-                          className="input-field"
-                          required
-                          disabled={true} // Email управляется Clerk
-                        />
-                        <p className="text-xs text-slate-400 mt-1">Управляется через Clerk</p>
-                      </div>
-                    </div>
-                    
+                <form onSubmit={handleProfileUpdate} className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label htmlFor="fullName" className="form-label">Полное имя</label>
+                      <label htmlFor="name" className="form-label">Имя пользователя</label>
                       <input
                         type="text"
-                        id="fullName"
-                        name="fullName"
-                        value={formData.fullName}
-                        onChange={handleChange}
-                        className="input-field"
-                      />
-                    </div>
-                    
-                    <div>
-                      <label htmlFor="bio" className="form-label">О себе</label>
-                      <textarea
-                        id="bio"
-                        name="bio"
-                        value={formData.bio}
-                        onChange={handleChange}
-                        className="input-field"
-                        rows={4}
-                      />
-                    </div>
-                    
-                    <div className="flex justify-end">
-                      <button
-                        type="submit"
-                        className="btn-primary"
-                        disabled={isLoading}
-                      >
-                        {isLoading ? 'Сохранение...' : 'Сохранить изменения'}
-                      </button>
-                    </div>
-                  </form>
-                ) : (
-                  <form onSubmit={handlePasswordUpdate} className="space-y-4">
-                    <div>
-                      <label htmlFor="currentPassword" className="form-label">Текущий пароль</label>
-                      <input
-                        type="password"
-                        id="currentPassword"
-                        name="currentPassword"
-                        value={formData.currentPassword}
+                        id="name"
+                        name="name"
+                        value={formData.name}
                         onChange={handleChange}
                         className="input-field"
                         required
@@ -296,71 +144,71 @@ const Profile: NextPage = () => {
                     </div>
                     
                     <div>
-                      <label htmlFor="newPassword" className="form-label">Новый пароль</label>
+                      <label htmlFor="email" className="form-label">Email</label>
                       <input
-                        type="password"
-                        id="newPassword"
-                        name="newPassword"
-                        value={formData.newPassword}
+                        type="email"
+                        id="email"
+                        name="email"
+                        value={formData.email}
                         onChange={handleChange}
                         className="input-field"
                         required
+                        disabled={true} // Email управляется Clerk
                       />
-                      <p className="text-xs text-slate-400 mt-1">Минимум 8 символов, должен содержать цифру и специальный символ</p>
+                      <p className="text-xs text-slate-400 mt-1">Управляется через Clerk</p>
                     </div>
-                    
-                    <div>
-                      <label htmlFor="confirmPassword" className="form-label">Подтвердите новый пароль</label>
-                      <input
-                        type="password"
-                        id="confirmPassword"
-                        name="confirmPassword"
-                        value={formData.confirmPassword}
-                        onChange={handleChange}
-                        className="input-field"
-                        required
-                      />
-                    </div>
-                    
-                    <p className="text-amber-400 text-sm mt-1">
-                      Обратите внимание: обновление пароля может потребовать повторной авторизации.
-                    </p>
-                    
-                    <div className="flex justify-end">
-                      <button
-                        type="submit"
-                        className="btn-primary"
-                        disabled={isLoading}
-                      >
-                        {isLoading ? 'Обновление...' : 'Обновить пароль'}
-                      </button>
-                    </div>
-                  </form>
-                )}
-              </div>
-              
-              <div className="card">
-                <h3 className="text-lg font-bold mb-4">Дополнительные настройки</h3>
-                
-                <div className="space-y-4">
-                  <div>
-                    <h4 className="text-md font-semibold mb-2">Персональные данные</h4>
-                    <Link href="/user/data" className="text-indigo-400 hover:text-indigo-300 text-sm">
-                      Управление личными данными
-                    </Link>
                   </div>
                   
                   <div>
-                    <h4 className="text-md font-semibold mb-2">Удаление аккаунта</h4>
+                    <label htmlFor="fullName" className="form-label">Полное имя</label>
+                    <input
+                      type="text"
+                      id="fullName"
+                      name="fullName"
+                      value={formData.fullName}
+                      onChange={handleChange}
+                      className="input-field"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label htmlFor="bio" className="form-label">О себе</label>
+                    <textarea
+                      id="bio"
+                      name="bio"
+                      value={formData.bio}
+                      onChange={handleChange}
+                      className="input-field"
+                      rows={4}
+                    />
+                  </div>
+                  
+                  <div className="flex justify-end">
+                    <button
+                      type="submit"
+                      className="btn-primary"
+                      disabled={isLoading}
+                    >
+                      {isLoading ? 'Сохранение...' : 'Сохранить изменения'}
+                    </button>
+                  </div>
+                </form>
+              </div>
+              
+              <div className="card">
+                <h3 className="text-lg font-bold mb-4">Удаление аккаунта</h3>
+                
+                <div className="space-y-4">
+                  <div>
                     <p className="text-sm text-slate-400 mb-2">
                       Эта операция необратима и удалит все ваши данные.
                     </p>
                     <button
                       className="text-red-500 hover:text-red-400 text-sm font-medium"
                       onClick={() => {
-                        if (window.confirm('Вы уверены, что хотите удалить свой аккаунт? Это действие необратимо.')) {
-                          // Здесь будет логика удаления аккаунта
-                          alert('Функция удаления аккаунта находится в разработке');
+                        if (window.confirm('Вы подтверждаете удаление своего аккаунта? Это действие необратимо и приведет к полному удалению всех ваших данных из системы. Ваши личные данные будут обезличены в соответствии с требованиями законодательства.')) {
+                          // Логика обезличивания данных пользователя
+                          alert('Ваш запрос на удаление аккаунта отправлен. Обработка может занять до 30 дней в соответствии с политикой обработки персональных данных.');
                         }
                       }}
                     >

@@ -36,6 +36,16 @@ const Button: React.FC<{
   );
 };
 
+// Типы персонажей
+interface CharacterStats {
+  analytics: number;
+  communication: number;
+  strategy: number;
+  technical: number;
+  creativity: number;
+  leadership?: number;
+}
+
 interface Character {
   id: string;
   name: string;
@@ -44,16 +54,10 @@ interface Character {
   role: string;
   difficulty: string;
   type: string;
-  stats: {
-    analytics: number;
-    communication: number;
-    strategy: number;
-    technical: number;
-    creativity: number;
-    leadership?: number;
-  };
+  stats: CharacterStats;
 }
 
+// Доступные персонажи
 const characters: Character[] = [
   {
     id: 'product-lead',
@@ -200,19 +204,12 @@ export const CharacterSelect: React.FC = () => {
       setError(null);
     }
     
-    const character = characters.find(c => c.id === selectedChar);
-    if (!character) {
-      if (isMounted.current) {
-        setError('Выбранный персонаж не найден');
-        setIsLoading(false);
-      }
-      return;
-    }
-    
     try {
-      if (!isSignedIn || !user) {
+      const character = characters.find(c => c.id === selectedChar);
+      
+      if (!character) {
         if (isMounted.current) {
-          setError('Необходимо авторизоваться для выбора персонажа');
+          setError('Выбранный персонаж не найден');
           setIsLoading(false);
         }
         return;
@@ -256,9 +253,23 @@ export const CharacterSelect: React.FC = () => {
         dispatch(selectCharacter(character));
         
         // Определяем, куда перенаправлять пользователя
-        const destination = redirectTo && typeof redirectTo === 'string'
-          ? redirectTo
-          : '/dashboard';
+        let destination = '/dashboard';
+        
+        if (redirectTo && typeof redirectTo === 'string') {
+          // Если есть параметр levelStage, добавляем его к URL назначения
+          const levelStage = router.query.levelStage;
+          
+          if (levelStage) {
+            // Проверяем, содержит ли redirectTo уже параметры
+            if (redirectTo.includes('?')) {
+              destination = `${redirectTo}&stage=${levelStage}`;
+            } else {
+              destination = `${redirectTo}?stage=${levelStage}`;
+            }
+          } else {
+            destination = redirectTo;
+          }
+        }
           
         // Перенаправляем пользователя
         safeRedirect(router, destination);
@@ -299,47 +310,74 @@ export const CharacterSelect: React.FC = () => {
             }`}
             onClick={() => handleSelectCharacter(character)}
           >
-            <div className="flex flex-col items-center pointer-events-none">
-              <div className="w-24 h-24 flex items-center justify-center mb-4">
-                <img
-                  src={character.image}
-                  alt={character.name}
-                  className="max-h-24 max-w-full object-contain"
-                  onError={(e) => {
-                    console.error(`Ошибка загрузки изображения для ${character.name}: ${character.image}`);
-                    e.currentTarget.src = '/characters/product-lead-icon.png';
-                  }}
-                />
+            <div className="aspect-w-1 aspect-h-1 w-full overflow-hidden rounded-md bg-slate-900 mb-4">
+              <img 
+                src={character.image} 
+                alt={character.name} 
+                className="object-cover"
+                onError={(e) => {
+                  console.error(`Ошибка загрузки изображения для ${character.name}:`, e);
+                  // Устанавливаем путь к запасному изображению
+                  e.currentTarget.src = '/characters/default.png';
+                }}
+              />
+            </div>
+            <h3 className="text-lg font-semibold mb-1">{character.name}</h3>
+            <p className="text-slate-400 text-sm mb-2">{character.role} • {character.difficulty}</p>
+            <p className="text-sm text-slate-300 line-clamp-3">{character.description}</p>
+            
+            <div className="mt-4 space-y-1">
+              <div className="flex justify-between text-xs">
+                <span className="text-slate-400">Аналитика:</span>
+                <span className="text-indigo-400">{character.stats.analytics}/10</span>
               </div>
-              <h3 className="text-lg font-bold text-white mb-1">{character.name}</h3>
-              <p className="text-xs text-gray-300 mb-2">{character.role} • {character.difficulty}</p>
-              <p className="text-gray-300 text-center text-xs mb-3">{character.description}</p>
-              
-              <div className="w-full">
-                <div className="grid grid-cols-1 gap-1 text-xs">
-                  {Object.entries(character.stats).map(([stat, value]) => (
-                    <div key={stat}>
-                      <span className="text-gray-400">{stat}:</span> 
-                      <span className="text-indigo-300 ml-1">{value}/10</span>
-                    </div>
-                  ))}
+              <div className="flex justify-between text-xs">
+                <span className="text-slate-400">Коммуникация:</span>
+                <span className="text-indigo-400">{character.stats.communication}/10</span>
+              </div>
+              <div className="flex justify-between text-xs">
+                <span className="text-slate-400">Стратегия:</span>
+                <span className="text-indigo-400">{character.stats.strategy}/10</span>
+              </div>
+              <div className="flex justify-between text-xs">
+                <span className="text-slate-400">Техничность:</span>
+                <span className="text-indigo-400">{character.stats.technical}/10</span>
+              </div>
+              <div className="flex justify-between text-xs">
+                <span className="text-slate-400">Креативность:</span>
+                <span className="text-indigo-400">{character.stats.creativity}/10</span>
+              </div>
+              {character.stats.leadership && (
+                <div className="flex justify-between text-xs">
+                  <span className="text-slate-400">Лидерство:</span>
+                  <span className="text-indigo-400">{character.stats.leadership}/10</span>
                 </div>
-              </div>
+              )}
             </div>
           </div>
         ))}
       </div>
-      <div className="flex flex-col items-center justify-center">
-        <Button 
-          onClick={handleConfirm} 
-          disabled={!selectedChar || isLoading || isRedirecting}
-          className="px-8 py-3"
+      
+      <div className="flex justify-end mt-4">
+        <button
+          className={`px-4 py-2 rounded-md ${
+            !selectedChar
+              ? 'bg-slate-700 text-slate-400 cursor-not-allowed'
+              : 'bg-blue-600 text-white hover:bg-blue-500'
+          }`}
+          onClick={handleConfirm}
+          disabled={!selectedChar || isLoading}
         >
-          {isLoading ? "Сохранение..." : isRedirecting ? "Перенаправление..." : "Подтвердить выбор"}
-        </Button>
-        {!selectedChar && (
-          <p className="text-gray-400 text-sm mt-2">Выберите персонажа, чтобы продолжить</p>
-        )}
+          {isLoading ? (
+            <span className="flex items-center">
+              <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              Сохранение...
+            </span>
+          ) : 'Подтвердить выбор'}
+        </button>
       </div>
     </div>
   );

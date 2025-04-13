@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
 import { NextPage } from 'next';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import axios from 'axios';
+import { motion } from 'framer-motion';
 
 import { LevelStage } from '../../../types/level';
 import ProtectedRoute from '../../components/auth/ProtectedRoute';
@@ -13,16 +14,17 @@ import AnalysisMaterial from '../../components/levels/AnalysisMaterial';
 import DecisionSelector from '../../components/levels/DecisionSelector';
 import { Quiz, QuizQuestion } from '../../components/levels/shared/quiz';
 import { RootState } from '../../store';
-import { selectSelectedCharacter } from '../../store/slices/characterSlice';
+import { selectSelectedCharacter, selectCharacter } from '../../store/slices/characterSlice';
 import ProgressIndicator from '../../components/levels/ProgressIndicator';
 import NotesSystem from '../../components/levels/NotesSystem';
 import { MentorTip } from '../../components/levels/shared/feedback';
 import { StepNavigation } from '../../components/levels/shared/navigation';
 import { LevelNavigation } from '../../components/levels/shared/navigation';
 import { Completion } from '../../components/levels/level1/stages/Completion';
+import Introduction from '../../components/levels/level1/stages/Introduction';
 
 // Импорты компонентов стадий из правильных путей
-import ProductMindsetTheory from '../../components/levels/level1/stages/ProductMindsetTheory';
+import ProductThinkingTheory from '../../components/levels/level1/stages/ProductThinkingTheory';
 import UXAnalysisTheory from '../../components/levels/level1/stages/UXAnalysisTheory';
 import MetricsTheory from '../../components/levels/level1/stages/MetricsTheory';
 import DecisionMakingTheory from '../../components/levels/level1/stages/DecisionMakingTheory';
@@ -34,6 +36,9 @@ import DecisionMakingPractice from '../../components/levels/level1/stages/Decisi
 
 // Импортируем стили из правильного пути
 import { styles as componentStyles } from '../../components/levels/level1/common/styles';
+
+// Импортируем функцию resetLevel1
+import { resetLevel1 } from '../../components/levels/shared/utils/levelResetUtils';
 
 // Этапы уровня
 const STAGE_ORDER = [
@@ -159,6 +164,7 @@ type Progress = LevelStage[];
 
 const Level1: NextPage = () => {
   const router = useRouter();
+  const dispatch = useDispatch();
   const selectedCharacter = useSelector(selectSelectedCharacter);
   const [isClient, setIsClient] = useState(false);
   const [currentStage, setCurrentStage] = useState<LevelStage>(LevelStage.INTRO);
@@ -178,38 +184,68 @@ const Level1: NextPage = () => {
   const [quizScore, setQuizScore] = useState<number>(0);
   const [quizAnswers, setQuizAnswers] = useState<Record<number, string>>({});
   const [completedStages, setCompletedStages] = useState<LevelStage[]>([]);
+  const [introStep, setIntroStep] = useState<number>(() => {
+    if (typeof window !== 'undefined') {
+      const savedStep = localStorage.getItem('level1_intro_step');
+      return savedStep ? parseInt(savedStep, 10) : 0;
+    }
+    return 0;
+  });
   
+  // Функция для загрузки персонажа из localStorage
+  const loadCharacterFromLocalStorage = () => {
+    if (typeof window !== 'undefined') {
+      const savedCharacterJSON = localStorage.getItem('selectedCharacter');
+      if (savedCharacterJSON) {
+        try {
+          const savedCharacter = JSON.parse(savedCharacterJSON);
+          if (savedCharacter && savedCharacter.id) {
+            console.log('Восстановление персонажа из localStorage:', savedCharacter.name);
+            dispatch(selectCharacter(savedCharacter));
+            return true;
+          }
+        } catch (error) {
+          console.error('Ошибка при восстановлении персонажа из localStorage:', error);
+          return false;
+        }
+      }
+    }
+    return false;
+  };
+
   useEffect(() => {
     setIsClient(true);
     
-    // Если у пользователя нет выбранного персонажа, перенаправляем на страницу выбора
-    if (isClient && !selectedCharacter) {
-      router.push('/character?redirectTo=/levels/1');
-    }
-    
-    // Загрузка данных уровня
     const loadLevelData = async () => {
       try {
-        // Имитация API запроса
-        setLevelData({
-          id: 1,
-          title: 'Введение в продуктовое мышление',
-          description: 'Научитесь основам продуктового мышления: от анализа пользовательских потребностей до принятия взвешенных решений на основе данных.',
-        });
+        // Получаем параметр stage из URL
+        const { stage: stageParam } = router.query;
         
-        setAnalysisData(mockAnalysisData);
-        
-        // Загрузка прогресса
+        // Получаем сохраненный прогресс
         const savedProgress = localStorage.getItem('level1Progress');
+        
         if (savedProgress) {
           try {
             const parsedProgress = JSON.parse(savedProgress);
             setProgress(parsedProgress.progress || []);
-            setCurrentStage(parsedProgress.currentStage || LevelStage.INTRO);
             setCompletedStages(parsedProgress.completedStages || []);
+            
+            // Если есть параметр stage в URL и он валидный, используем его
+            if (stageParam && Object.values(LevelStage).includes(stageParam as LevelStage)) {
+              setCurrentStage(stageParam as LevelStage);
+            } else {
+              // Иначе используем сохраненное состояние или INTRO по умолчанию
+              setCurrentStage(parsedProgress.currentStage || LevelStage.INTRO);
+            }
           } catch (error) {
             console.error('Ошибка при загрузке прогресса:', error);
+            setCurrentStage(LevelStage.INTRO);
           }
+        } else {
+          // Если нет сохраненного прогресса, всегда начинаем с INTRO
+          setCurrentStage(LevelStage.INTRO);
+          setProgress([]);
+          setCompletedStages([]);
         }
         
         setIsLoading(false);
@@ -220,7 +256,19 @@ const Level1: NextPage = () => {
     };
     
     loadLevelData();
-  }, [isClient, router, selectedCharacter]);
+  }, [isClient, router]);
+  
+  // Отдельно следим за изменением параметра stage в URL
+  useEffect(() => {
+    if (typeof window !== 'undefined' && !isLoading && router.isReady) {
+      const stageParam = router.query.stage as string;
+      
+      if (stageParam && Object.values(LevelStage).includes(stageParam as LevelStage)) {
+        console.log('URL параметр stage изменился на:', stageParam);
+        setCurrentStage(stageParam as LevelStage);
+      }
+    }
+  }, [router.query.stage, router.isReady, isLoading]);
   
   // Сохранение прогресса
   useEffect(() => {
@@ -323,29 +371,15 @@ const Level1: NextPage = () => {
 
   // Загружаем сохраненный прогресс и этап из URL при монтировании компонента
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      // Проверяем наличие параметра stage в URL
-      const urlParams = new URLSearchParams(window.location.search);
-      const stageParam = urlParams.get('stage');
-      
-      if (stageParam && Object.values(LevelStage).includes(stageParam as LevelStage)) {
-        setCurrentStage(stageParam as LevelStage);
-        
-        // Устанавливаем соответствующий прогресс
-        switch (stageParam) {
-          case LevelStage.PRODUCT_THINKING_THEORY: saveProgress(stageParam as LevelStage, progress); break;
-          case LevelStage.UX_ANALYSIS_THEORY: saveProgress(stageParam as LevelStage, progress); break;
-          case LevelStage.METRICS_THEORY: saveProgress(stageParam as LevelStage, progress); break;
-          case LevelStage.DECISION_MAKING_THEORY: saveProgress(stageParam as LevelStage, progress); break;
-          case LevelStage.UX_ANALYSIS_PRACTICE: saveProgress(stageParam as LevelStage, progress); break;
-          case LevelStage.METRICS_PRACTICE: saveProgress(stageParam as LevelStage, progress); break;
-          case LevelStage.DECISION_MAKING_PRACTICE: saveProgress(stageParam as LevelStage, progress); break;
-          case LevelStage.QUIZ: saveProgress(stageParam as LevelStage, progress); break;
-          case LevelStage.COMPLETE: saveProgress(stageParam as LevelStage, progress); break;
-        }
-      }
+    if (typeof window !== 'undefined' && selectedCharacter) {
+      // Создаем новый URL объект без привязки к Window объекту
+      const url = new URL(window.location.href);
+      // Обновляем параметр stage
+      url.searchParams.set('stage', currentStage);
+      // Обновляем URL без перезагрузки
+      window.history.replaceState({}, '', url.toString());
     }
-  }, []);
+  }, [currentStage, selectedCharacter]);
   
   // Функция для сохранения прогресса
   const saveProgress = (stage: LevelStage, currentProgress: Progress) => {
@@ -510,6 +544,13 @@ const Level1: NextPage = () => {
     setCurrentStage(getNextStage(stage));
   };
   
+  // Сохраняем текущий шаг при его изменении
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('level1_intro_step', introStep.toString());
+    }
+  }, [introStep]);
+  
   // Список всех этапов для навигации
   const stagesList = [
     { stage: LevelStage.INTRO, title: 'Введение', 
@@ -550,83 +591,10 @@ const Level1: NextPage = () => {
     
     switch (currentStage) {
       case LevelStage.INTRO:
-        // Шаги интро
-        const introSteps = [
-          // Шаг 1: Введение
-          <div key="intro-step-1">
-            <h1 className={componentStyles.header}>Уровень 1: Основы продуктового мышления</h1>
-            
-            <p className={componentStyles.text}>
-              Добро пожаловать на первый уровень! Здесь вы познакомитесь с основами продуктового мышления 
-              и научитесь применять его на практике.
-            </p>
-            
-            <p className={componentStyles.text}>
-              В этом уровне вас ждет:
-            </p>
-            
-            <ul className={componentStyles.list}>
-              <li>Теоретическая часть с ключевыми концепциями</li>
-              <li>Практические задания для закрепления знаний</li>
-              <li>Финальный тест для проверки усвоенного материала</li>
-            </ul>
-            
-            <div className="mb-4 mt-6">
-              <MentorTip
-                tip="Добро пожаловать! В этом уровне вы будете чередовать теорию и практику, что поможет лучше усвоить материал. Не спешите и внимательно выполняйте все задания."
-                position="bottom-right"
-                showIcon={true}
-                avatar="/characters/avatar_mentor.png"
-                name="Ментор"
-                defaultOpen={false}
-              />
-            </div>
-          </div>,
-          
-          // Шаг 2: Структура обучения
-          <div key="intro-step-2">
-            <h2 className={componentStyles.subheader}>Как построено обучение</h2>
-            
-            <p className={componentStyles.text}>
-              Каждый раздел состоит из двух частей:
-            </p>
-            
-            <ul className={componentStyles.list}>
-              <li><strong>Теория</strong> - здесь вы изучите основные концепции и принципы</li>
-              <li><strong>Практика</strong> - здесь вы примените полученные знания на практике</li>
-            </ul>
-            
-            <p className={componentStyles.text}>
-              После каждого раздела вы сможете проверить свои знания и перейти к следующему этапу.
-            </p>
-          </div>,
-          
-          // Шаг 3: Начало обучения
-          <div key="intro-step-3">
-            <h2 className={componentStyles.subheader}>Готовы начать?</h2>
-            
-            <p className={componentStyles.text}>
-              Теперь, когда вы знаете, как построено обучение, давайте начнем с основ продуктового мышления.
-            </p>
-            
-            <p className={componentStyles.text}>
-              В первом разделе вы познакомитесь с ключевыми принципами и научитесь применять их на практике.
-            </p>
-          </div>
-        ];
-        
-        return (
-          <div className={componentStyles.container}>
-            <StepNavigation 
-              steps={introSteps} 
-              onComplete={() => handleStageComplete(LevelStage.INTRO)}
-              completeButtonText="Начать обучение"
-            />
-          </div>
-        );
+        return <Introduction onComplete={() => handleStageComplete(LevelStage.INTRO)} />;
         
       case LevelStage.PRODUCT_THINKING_THEORY:
-        return <ProductMindsetTheory onComplete={() => handleStageComplete(LevelStage.PRODUCT_THINKING_THEORY)} />;
+        return <ProductThinkingTheory onComplete={() => handleStageComplete(LevelStage.PRODUCT_THINKING_THEORY)} />;
         
       case LevelStage.UX_ANALYSIS_THEORY:
         return <UXAnalysisTheory onComplete={() => handleStageComplete(LevelStage.UX_ANALYSIS_THEORY)} />;
@@ -680,6 +648,37 @@ const Level1: NextPage = () => {
     }
   };
   
+  // Функция для сброса прогресса уровня
+  const resetLevelProgress = () => {
+    if (typeof window !== 'undefined') {
+      // Используем общую функцию для сброса уровня
+      resetLevel1();
+      
+      // Сбрасываем все состояния
+      setProgress([]);
+      setCompletedStages([]);
+      setCurrentStage(LevelStage.INTRO);
+      setIntroStep(0);
+      setCurrentDialogIndex(0);
+      setDialogsCompleted(false);
+      setFeedbackCompleted(false);
+      setQuizScore(0);
+      setQuizAnswers({});
+      setSelectedMaterial(null);
+      setNotes([]);
+      setSelectedSolution(null);
+      setResult(null);
+      setCompletionTime(0);
+      setStartTime(Date.now());
+      
+      // Показываем сообщение
+      alert('Прогресс уровня сброшен');
+      
+      // Используем router для перенаправления на чистую страницу уровня без параметров
+      router.replace('/levels/1', undefined, { shallow: true });
+    }
+  };
+
   return (
     <ProtectedRoute>
       <div className="min-h-screen bg-gradient-to-b from-slate-900 to-indigo-950 text-white">
@@ -698,6 +697,17 @@ const Level1: NextPage = () => {
               stages={stagesList} 
             />
             <div className="max-w-7xl mx-auto px-4 py-8">
+              <div className="flex justify-end mb-4">
+                <button 
+                  onClick={resetLevelProgress}
+                  className="bg-red-600 hover:bg-red-700 text-white py-1 px-3 rounded-lg text-sm flex items-center transition-colors"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clipRule="evenodd" />
+                  </svg>
+                  Сбросить прогресс
+                </button>
+              </div>
               {renderStageContent()}
             </div>
           </>

@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { styles } from '../common/styles';
 import MentorTip from '../../shared/feedback/MentorTip';
 import StepNavigation from '../../shared/navigation/StepNavigation';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
+import { isLevelReset } from '../../shared/utils/levelResetUtils';
 
 interface MetricsTheoryProps {
   onComplete: () => void;
@@ -304,6 +305,29 @@ const FunnelChart: React.FC<{steps: Array<{name: string; value: number; color: s
 };
 
 const MetricsTheory: React.FC<MetricsTheoryProps> = ({ onComplete }) => {
+  // Состояние для текущего шага
+  const [currentStep, setCurrentStep] = useState<number>(0);
+  
+  // При монтировании компонента проверяем, был ли сброс уровня
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      // Проверяем, был ли сброс уровня
+      const isReset = isLevelReset(1);
+      
+      if (isReset) {
+        // Если был сброс, устанавливаем шаг на 0
+        localStorage.setItem('metrics_theory_step', '0');
+        setCurrentStep(0);
+      } else {
+        // Если не было сброса, пробуем загрузить сохраненный шаг
+        const savedStep = localStorage.getItem('metrics_theory_step');
+        if (savedStep) {
+          setCurrentStep(parseInt(savedStep, 10));
+        }
+      }
+    }
+  }, []);
+  
   // Данные для графиков и воронок
   const retentionData = [
     { label: "День 1", value: 100 },
@@ -663,6 +687,9 @@ const MetricsTheory: React.FC<MetricsTheoryProps> = ({ onComplete }) => {
         completeButtonText="К практике"
         showProgress={true}
         showStepNumbers={true}
+        currentStep={currentStep}
+        onStepChange={setCurrentStep}
+        persistStepKey="metrics_theory_step"
       />
     </div>
   );

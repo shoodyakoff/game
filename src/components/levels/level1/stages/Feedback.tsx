@@ -3,7 +3,11 @@ import { useRouter } from 'next/router';
 import { styles } from '../common/styles';
 import { LevelStage, getNextStage } from '../../shared/LevelStages';
 
-const Feedback = () => {
+interface FeedbackProps {
+  onComplete?: () => void;
+}
+
+const Feedback: React.FC<FeedbackProps> = ({ onComplete }) => {
   const router = useRouter();
   const [rating, setRating] = useState<number | null>(null);
   const [difficultyConcepts, setDifficultyConcepts] = useState<string[]>([]);
@@ -65,8 +69,12 @@ const Feedback = () => {
 
   const handleContinue = () => {
     // Переходим к следующему этапу (в данном случае - к квизу)
-    const nextStage = getNextStage(LevelStage.FEEDBACK);
-    router.push(`/level1?stage=${nextStage}`);
+    if (onComplete) {
+      onComplete();
+    } else {
+      const nextStage = getNextStage(LevelStage.FEEDBACK);
+      router.push(`/level1?stage=${nextStage}`);
+    }
   };
 
   return (

@@ -5,72 +5,64 @@ import StageNavigation from './common/StageNavigation';
 import { LevelStage, LEVEL_STAGE_SEQUENCE, getNextStage, getPreviousStage, getStageName } from '../shared/LevelStages';
 
 // Импорт компонентов для разных этапов
-import ProductMindsetTheory from './stages/ProductMindsetTheory';
+import Introduction from './stages/Introduction';
+import ProductThinkingTheory from './stages/ProductThinkingTheory';
+import ProductThinkingPractice from './stages/ProductThinkingPractice';
 import UXAnalysisTheory from './stages/UXAnalysisTheory';
 import UXAnalysisPractice from './stages/UXAnalysisPractice';
 import MetricsTheory from './stages/MetricsTheory';
 import MetricsPractice from './stages/MetricsPractice';
+import DecisionMakingTheory from './stages/DecisionMakingTheory';
+import DecisionMakingPractice from './stages/DecisionMakingPractice';
+import Feedback from './stages/Feedback';
+import Quiz from './stages/Quiz';
+import { Completion } from './stages/Completion';
 
-// Временные заглушки для остальных этапов
-const Introduction = ({ onComplete }) => (
-  <div className={styles.container}>
-    <h1 className={styles.header}>Введение</h1>
-    <p className={styles.text}>Добро пожаловать в первый уровень обучения продуктовому мышлению и UX-анализу!</p>
-    <button onClick={onComplete}>Начать</button>
-  </div>
-);
+// Обертки для компонентов, которые не принимают проп onComplete
+const IntroductionWrapper = ({ onComplete }) => {
+  const router = useRouter();
+  const handleContinue = () => {
+    onComplete();
+  };
+  
+  return <Introduction />;
+};
 
-const TeamMeeting = ({ onComplete }) => (
-  <div className={styles.container}>
-    <h1 className={styles.header}>Встреча с командой</h1>
-    <p className={styles.text}>Познакомьтесь с командой и узнайте детали задачи.</p>
-    <button onClick={onComplete}>Начать</button>
-  </div>
-);
+const ProductThinkingTheoryWrapper = ({ onComplete }) => {
+  return (
+    <div>
+      <ProductThinkingTheory />
+      <div className="flex justify-center mt-6">
+        <button 
+          className={styles.btnPrimary}
+          onClick={onComplete}
+        >
+          Продолжить
+        </button>
+      </div>
+    </div>
+  );
+};
 
-const DecisionMakingTheory = ({ onComplete }) => (
-  <div className={styles.container}>
-    <h1 className={styles.header}>Теория принятия решений</h1>
-    <p className={styles.text}>Изучите основы принятия решений на основе данных.</p>
-    <button onClick={onComplete}>Начать</button>
-  </div>
-);
-
-const DecisionMakingPractice = ({ onComplete }) => (
-  <div className={styles.container}>
-    <h1 className={styles.header}>Практика принятия решений</h1>
-    <p className={styles.text}>Примените принципы принятия решений на практике.</p>
-    <button onClick={onComplete}>Начать</button>
-  </div>
-);
-
-const Feedback = ({ onComplete }) => (
-  <div className={styles.container}>
-    <h1 className={styles.header}>Обратная связь</h1>
-    <p className={styles.text}>Получите обратную связь по вашему решению.</p>
-    <button onClick={onComplete}>Начать</button>
-  </div>
-);
-
-const Quiz = ({ onComplete }) => (
-  <div className={styles.container}>
-    <h1 className={styles.header}>Тест</h1>
-    <p className={styles.text}>Проверьте свои знания, пройдя итоговый тест.</p>
-    <button onClick={onComplete}>Начать</button>
-  </div>
-);
-
-const Completion = ({ onComplete }) => (
-  <div className={styles.container}>
-    <h1 className={styles.header}>Завершение уровня</h1>
-    <p className={styles.text}>Поздравляем! Вы успешно прошли первый уровень.</p>
-    <button onClick={onComplete}>Начать следующий уровень</button>
-  </div>
-);
+const FeedbackWrapper = ({ onComplete }) => {
+  return (
+    <div>
+      <Feedback />
+      <div className="flex justify-center mt-6">
+        <button 
+          className={styles.btnPrimary}
+          onClick={onComplete}
+        >
+          Продолжить
+        </button>
+      </div>
+    </div>
+  );
+};
 
 const Level1 = () => {
   const router = useRouter();
-  const [currentStage, setCurrentStage] = useState<LevelStage>(LevelStage.INTRODUCTION);
+  const [currentStage, setCurrentStage] = useState<LevelStage>(LevelStage.INTRO);
   const [completedStages, setCompletedStages] = useState<LevelStage[]>([]);
 
   useEffect(() => {
@@ -113,12 +105,12 @@ const Level1 = () => {
   // Рендеринг компонента в зависимости от текущего этапа
   const renderStageContent = () => {
     switch (currentStage) {
-      case LevelStage.INTRODUCTION:
-        return <Introduction onComplete={handleNextStage} />;
-      case LevelStage.TEAM_MEETING:
-        return <TeamMeeting onComplete={handleNextStage} />;
-      case LevelStage.PRODUCT_MINDSET_THEORY:
-        return <ProductMindsetTheory onComplete={handleNextStage} />;
+      case LevelStage.INTRO:
+        return <IntroductionWrapper onComplete={handleNextStage} />;
+      case LevelStage.PRODUCT_THINKING_THEORY:
+        return <ProductThinkingTheoryWrapper onComplete={handleNextStage} />;
+      case LevelStage.PRODUCT_THINKING_PRACTICE:
+        return <ProductThinkingPractice onComplete={handleNextStage} />;
       case LevelStage.UX_ANALYSIS_THEORY:
         return <UXAnalysisTheory onComplete={handleNextStage} />;
       case LevelStage.UX_ANALYSIS_PRACTICE:
@@ -132,13 +124,13 @@ const Level1 = () => {
       case LevelStage.DECISION_MAKING_PRACTICE:
         return <DecisionMakingPractice onComplete={handleNextStage} />;
       case LevelStage.FEEDBACK:
-        return <Feedback onComplete={handleNextStage} />;
+        return <FeedbackWrapper onComplete={handleNextStage} />;
       case LevelStage.QUIZ:
         return <Quiz onComplete={handleNextStage} />;
       case LevelStage.COMPLETE:
         return <Completion onComplete={handleNextStage} />;
       default:
-        return <Introduction onComplete={handleNextStage} />;
+        return <IntroductionWrapper onComplete={handleNextStage} />;
     }
   };
 
@@ -148,7 +140,7 @@ const Level1 = () => {
         currentStage={currentStage}
         completedStages={completedStages}
         onStageChange={handleStageChange}
-        showBackButton={currentStage !== LevelStage.INTRODUCTION}
+        showBackButton={currentStage !== LevelStage.INTRO}
         goToPreviousStage={handlePreviousStage}
       />
       
@@ -157,7 +149,7 @@ const Level1 = () => {
       </div>
       
       <div className={styles.navigationButtons}>
-        {currentStage !== LevelStage.INTRODUCTION && (
+        {currentStage !== LevelStage.INTRO && (
           <button 
             className={styles.navigationButton} 
             onClick={handlePreviousStage}

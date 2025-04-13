@@ -1,13 +1,37 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { styles } from '../common/styles';
 import StepNavigation from '../../shared/navigation/StepNavigation';
 import MentorTip from '../../shared/feedback/MentorTip';
+import { isLevelReset } from '../../shared/utils/levelResetUtils';
 
 type DecisionMakingTheoryProps = {
   onComplete: () => void;
 };
 
 const DecisionMakingTheory = ({ onComplete }: DecisionMakingTheoryProps) => {
+  // Состояние для текущего шага
+  const [currentStep, setCurrentStep] = useState<number>(0);
+  
+  // При монтировании компонента проверяем, был ли сброс уровня
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      // Проверяем, был ли сброс уровня
+      const isReset = isLevelReset(1);
+      
+      if (isReset) {
+        // Если был сброс, устанавливаем шаг на 0
+        localStorage.setItem('decision_making_theory_step', '0');
+        setCurrentStep(0);
+      } else {
+        // Если не было сброса, пробуем загрузить сохраненный шаг
+        const savedStep = localStorage.getItem('decision_making_theory_step');
+        if (savedStep) {
+          setCurrentStep(parseInt(savedStep, 10));
+        }
+      }
+    }
+  }, []);
+  
   const steps = [
     // Шаг 1: Введение в принятие решений
     <div key="intro" className={styles.section}>
@@ -283,6 +307,9 @@ const DecisionMakingTheory = ({ onComplete }: DecisionMakingTheoryProps) => {
         continueButtonText="Далее"
         showProgress={true}
         showStepNumbers={true}
+        currentStep={currentStep}
+        onStepChange={setCurrentStep}
+        persistStepKey="decision_making_theory_step"
       />
     </div>
   );

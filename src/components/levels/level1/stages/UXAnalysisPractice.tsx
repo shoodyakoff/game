@@ -1,8 +1,159 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { styles } from '../common/styles';
 import uxAnalysisData from '../data/uxAnalysisData';
 import MentorTip from '../../shared/feedback/MentorTip';
+import { motion } from 'framer-motion';
 import StepNavigation from '../../shared/navigation/StepNavigation';
+
+// Компонент для градиентной секции
+const GradientSection = ({
+  title,
+  subtitle,
+  children,
+  withAnimation = false,
+  colorScheme = 'indigo',
+  bordered = false,
+  rounded = false
+}: {
+  title: string;
+  subtitle?: string;
+  children: React.ReactNode;
+  withAnimation?: boolean;
+  colorScheme?: 'indigo' | 'amber' | 'emerald';
+  bordered?: boolean;
+  rounded?: boolean;
+}) => {
+  const baseStyles = "p-6 mb-8";
+  
+  const colorStyles = {
+    indigo: "bg-gradient-to-br from-indigo-900/40 to-indigo-950/60",
+    amber: "bg-gradient-to-br from-amber-900/40 to-amber-950/60",
+    emerald: "bg-gradient-to-br from-emerald-900/40 to-emerald-950/60"
+  };
+  
+  const borderStyles = {
+    indigo: "border border-indigo-700/50",
+    amber: "border border-amber-700/50",
+    emerald: "border border-emerald-700/50"
+  };
+  
+  return (
+    <motion.div
+      className={`
+        ${baseStyles}
+        ${colorStyles[colorScheme]}
+        ${bordered ? borderStyles[colorScheme] : ''}
+        ${rounded ? 'rounded-lg' : ''}
+      `}
+      initial={withAnimation ? { opacity: 0, y: 20 } : undefined}
+      animate={withAnimation ? { opacity: 1, y: 0 } : undefined}
+      transition={withAnimation ? { duration: 0.5 } : undefined}
+    >
+      <div className="mb-4">
+        <h2 className={`text-2xl font-bold ${colorScheme === 'indigo' ? 'text-indigo-300' : colorScheme === 'amber' ? 'text-amber-300' : 'text-emerald-300'}`}>
+          {title}
+        </h2>
+        {subtitle && (
+          <p className="text-slate-400 mt-1">{subtitle}</p>
+        )}
+      </div>
+      {children}
+    </motion.div>
+  );
+};
+
+// Компонент для карточки с информацией
+const InfoCard = ({ 
+  title, 
+  description, 
+  icon, 
+  isActive, 
+  onClick, 
+  variant = 'default',
+  className = '',
+  animation = 'none'
+}: {
+  title: string;
+  description: React.ReactNode;
+  icon?: string | React.ReactNode;
+  isActive?: boolean;
+  onClick?: () => void;
+  variant?: 'default' | 'highlighted' | 'warning' | 'success';
+  className?: string;
+  animation?: 'none' | 'fade' | 'scale' | 'slide';
+}) => {
+  const baseStyles = "rounded-xl p-5 transition-all duration-300 shadow-lg";
+  
+  const variantStyles = {
+    default: "bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700 hover:shadow-slate-700/30 hover:border-slate-600",
+    highlighted: "bg-gradient-to-br from-indigo-900/40 to-indigo-950/60 border border-indigo-700/50 hover:shadow-indigo-700/30 hover:border-indigo-600/60",
+    warning: "bg-gradient-to-br from-amber-900/40 to-amber-950/60 border border-amber-700/50 hover:shadow-amber-700/30 hover:border-amber-600/60",
+    success: "bg-gradient-to-br from-emerald-900/40 to-emerald-950/60 border border-emerald-700/50 hover:shadow-emerald-700/30 hover:border-emerald-600/60"
+  };
+  
+  const activeStyles = {
+    default: "ring-2 ring-indigo-500 shadow-lg shadow-indigo-500/30",
+    highlighted: "ring-2 ring-indigo-400 shadow-lg shadow-indigo-400/30",
+    warning: "ring-2 ring-amber-500 shadow-lg shadow-amber-500/30",
+    success: "ring-2 ring-emerald-500 shadow-lg shadow-emerald-500/30"
+  };
+
+  const getAnimationProps = () => {
+    switch (animation) {
+      case 'fade':
+        return {
+          initial: { opacity: 0 },
+          animate: { opacity: 1 },
+          transition: { duration: 0.5 }
+        };
+      case 'scale':
+        return {
+          initial: { scale: 0.9, opacity: 0 },
+          animate: { scale: 1, opacity: 1 },
+          transition: { duration: 0.3 }
+        };
+      case 'slide':
+        return {
+          initial: { x: -20, opacity: 0 },
+          animate: { x: 0, opacity: 1 },
+          transition: { duration: 0.4 }
+        };
+      default:
+        return {};
+    }
+  };
+  
+  return (
+    <motion.div 
+      className={`
+        ${baseStyles} 
+        ${variantStyles[variant]} 
+        ${isActive ? activeStyles[variant] : ''}
+        ${onClick ? 'cursor-pointer transform hover:-translate-y-1' : ''} 
+        ${className}
+      `}
+      onClick={onClick}
+      whileHover={onClick ? { scale: 1.02 } : {}}
+      {...getAnimationProps()}
+    >
+      {icon && (
+        <div className={`text-2xl mb-3 ${variant === 'warning' ? 'text-amber-500' : 
+          variant === 'success' ? 'text-emerald-500' : 
+          variant === 'highlighted' ? 'text-indigo-400' : 'text-white'}`}>
+          {icon}
+        </div>
+      )}
+      <h3 className={`text-lg font-bold mb-3 ${
+        variant === 'warning' ? 'text-amber-300' : 
+        variant === 'success' ? 'text-emerald-300' : 
+        variant === 'highlighted' ? 'text-indigo-300' : 'text-white'
+      }`}>{title}</h3>
+      <div className="text-slate-300">
+        {description}
+      </div>
+    </motion.div>
+  );
+};
 
 interface UserSegment {
   id: string;
@@ -24,496 +175,390 @@ type UXAnalysisPracticeProps = {
 };
 
 const UXAnalysisPractice: React.FC<UXAnalysisPracticeProps> = ({ onComplete }) => {
-  const [activeTab, setActiveTab] = useState<'userSegments' | 'userJourney'>('userSegments');
-  const [selectedSegment, setSelectedSegment] = useState<string>('');
-  const [selectedStep, setSelectedStep] = useState<string>('');
-  const [userInsight, setUserInsight] = useState<string>('');
-  const [submitted, setSubmitted] = useState<boolean>(false);
-  const [feedback, setFeedback] = useState<string>('');
-  const [feedbackType, setFeedbackType] = useState<'excellent' | 'good' | 'average' | 'poor'>('average');
-  const [selectedProblems, setSelectedProblems] = useState<string[]>([]);
-  const [selectedSolution, setSelectedSolution] = useState<string | null>(null);
-  const [userNotes, setUserNotes] = useState<string>('');
+  const [segmentNotes, setSegmentNotes] = useState<string>('');
+  const [journeyNotes, setJourneyNotes] = useState<string>('');
   const [improvementPlan, setImprovementPlan] = useState<{[key: string]: boolean}>({});
-
-  const userSegments: UserSegment[] = [
-    {
-      id: 'new_users',
-      name: 'Новые пользователи',
-      description: 'Пользователи, которые зарегистрировались в TaskMaster не более 2 недель назад и находятся в процессе освоения продукта. Часто не знакомы с терминологией и ключевыми концепциями управления задачами.',
-      painPoints: [
-        'Непонятная терминология и обозначения полей',
-        'Слишком много обязательных полей без объяснения их назначения',
-        'Отсутствие подсказок и руководства по процессу',
-        'Непонятно, какие поля обязательны для заполнения',
-        'Сложно понять, как правильно настроить приоритеты и теги'
-      ],
-      insights: [
-        'Создание упрощенного режима с минимальным набором полей для новых пользователей',
-        'Добавление интерактивных подсказок, объясняющих назначение каждого поля',
-        'Внедрение пошагового процесса с подробными инструкциями',
-        'Визуальное выделение обязательных полей и предоставление примеров заполнения',
-        'Предложение готовых шаблонов для типичных задач'
-      ]
-    },
-    {
-      id: 'power_users',
-      name: 'Опытные пользователи',
-      description: 'Пользователи, которые активно используют TaskMaster более 3 месяцев, хорошо знакомы со всеми функциями и создают множество задач ежедневно. Часто работают в команде и используют расширенные функции.',
-      painPoints: [
-        'Процесс создания задачи занимает слишком много времени',
-        'Отсутствие быстрых способов дублирования и модификации существующих задач',
-        'Ограниченные возможности для массового создания задач',
-        'Недостаточно горячих клавиш для быстрого заполнения полей',
-        'Отсутствие возможности сохранения пользовательских шаблонов'
-      ],
-      insights: [
-        'Внедрение клавиатурных сокращений для всех действий в форме',
-        'Создание функции дублирования существующих задач с возможностью изменения',
-        'Разработка API или интеграции для массового создания задач',
-        'Добавление возможности создания и сохранения пользовательских шаблонов',
-        'Оптимизация процесса с фокусом на минимизацию количества кликов'
-      ]
-    },
-    {
-      id: 'mobile_users',
-      name: 'Мобильные пользователи',
-      description: 'Пользователи, которые преимущественно работают с TaskMaster через мобильное приложение. Часто создают задачи в дороге или на встречах, предпочитают быстрый и удобный доступ с ограниченным вводом текста.',
-      painPoints: [
-        'Интерфейс слишком перегружен для маленького экрана',
-        'Сложно заполнять большое количество полей на мобильном устройстве',
-        'Неудобная работа с календарем и выбором времени',
-        'Отсутствие возможности использовать голосовой ввод',
-        'Медленная загрузка формы на мобильных устройствах'
-      ],
-      insights: [
-        'Создание специальной мобильной версии с упрощенным интерфейсом',
-        'Внедрение голосового ввода для создания задач',
-        'Адаптация календаря и полей выбора времени для удобства на мобильных устройствах',
-        'Разработка функции быстрого создания задач с минимальным количеством обязательных полей',
-        'Оптимизация производительности для быстрой загрузки на мобильных устройствах'
-      ]
-    }
-  ];
+  const [selectedProblems, setSelectedProblems] = useState<string[]>([]);
+  const [selectedSolution, setSelectedSolution] = useState<string>('');
+  const [activeSection, setActiveSection] = useState<string | null>(null);
+  const [currentStep, setCurrentStep] = useState<number>(0);
   
-  const userJourneySteps: UserJourneyStep[] = [
-    {
-      id: 'step1',
-      name: 'Инициация создания задачи',
-      description: 'Пользователь нажимает кнопку "Создать задачу" и переходит на первый экран формы. Здесь он должен ввести базовую информацию о задаче.',
-      painPoints: [
-        'Кнопка "Создать задачу" недостаточно заметна для новых пользователей',
-        'Переход к форме занимает слишком много времени (3-4 секунды)',
-        'Некоторые пользователи ожидают увидеть упрощенную форму, а не полную',
-        'Нет быстрого доступа к созданию задачи из разных разделов приложения'
-      ]
-    },
-    {
-      id: 'step2',
-      name: 'Заполнение основной информации',
-      description: 'Пользователь вводит название, описание и назначает исполнителя задачи. Эти поля являются обязательными для заполнения.',
-      painPoints: [
-        'Неочевидно, что поле "Описание" является обязательным',
-        'Сложный механизм поиска и выбора исполнителя, особенно в больших командах',
-        'Отсутствие автосохранения введенных данных при случайном закрытии формы',
-        'Нет предложений или шаблонов для типичных названий и описаний задач'
-      ]
-    },
-    {
-      id: 'step3',
-      name: 'Указание сроков и приоритета',
-      description: 'Пользователь устанавливает дедлайн, приоритет и предполагаемую длительность выполнения задачи.',
-      painPoints: [
-        'Календарь для выбора даты неудобен, особенно на мобильных устройствах',
-        'Непонятная система приоритетов (числовые значения вместо понятных обозначений)',
-        'Сложно установить повторяющиеся задачи или серии задач',
-        'Нет возможности быстро выбрать типичные значения (сегодня, завтра, конец недели)'
-      ]
-    },
-    {
-      id: 'step4',
-      name: 'Настройка дополнительных параметров',
-      description: 'Пользователь может добавить теги, метки, прикрепить файлы и связать задачу с другими задачами или проектами.',
-      painPoints: [
-        'Слишком много параметров на одном экране, что вызывает когнитивную перегрузку',
-        'Неясно, какие параметры действительно важны для эффективного управления задачами',
-        'Сложный механизм прикрепления файлов и связывания с другими задачами',
-        'Отсутствие подсказок о том, как использовать теги и метки для лучшей организации'
-      ]
-    },
-    {
-      id: 'step5',
-      name: 'Подтверждение и создание задачи',
-      description: 'Пользователь просматривает введенную информацию и подтверждает создание задачи, нажимая кнопку "Создать".',
-      painPoints: [
-        'Нет четкого обзора всех введенных данных перед созданием',
-        'Слишком долгое время обработки после нажатия кнопки "Создать" (до 2 секунд)',
-        'Отсутствие подтверждения успешного создания задачи',
-        'Нет опции "Создать и создать еще одну" для быстрого создания нескольких задач'
-      ]
-    }
-  ];
-  
-  const handleTabChange = (tab: 'userSegments' | 'userJourney') => {
-    setActiveTab(tab);
-    setSelectedSegment('');
-    setSelectedStep('');
-    setUserInsight('');
-    setSubmitted(false);
-    setFeedback('');
-    setSelectedProblems([]);
-    setSelectedSolution(null);
-    setUserNotes('');
-    setImprovementPlan({});
-  };
-  
-  const handleSegmentSelect = (segmentId: string) => {
-    setSelectedSegment(segmentId);
-    setUserInsight('');
-    setSubmitted(false);
-    setFeedback('');
-  };
-  
-  const handleStepSelect = (stepId: string) => {
-    setSelectedStep(stepId);
-    setUserInsight('');
-    setSubmitted(false);
-    setFeedback('');
-  };
-  
-  const handleInsightChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setUserInsight(e.target.value);
-    setSubmitted(false);
-    setFeedback('');
-  };
-  
-  const handleProblemSelect = (problem: string) => {
-    setSelectedProblems(prev => {
-      if (prev.includes(problem)) {
-        return prev.filter(p => p !== problem);
+  // Сохраняем и восстанавливаем состояние в localStorage
+  useEffect(() => {
+    const savedState = localStorage.getItem('ux_analysis_practice_state');
+    if (savedState) {
+      try {
+        const state = JSON.parse(savedState);
+        setSegmentNotes(state.segmentNotes || '');
+        setJourneyNotes(state.journeyNotes || '');
+        setImprovementPlan(state.improvementPlan || {});
+        setSelectedProblems(state.selectedProblems || []);
+        setSelectedSolution(state.selectedSolution || '');
+        setActiveSection(state.activeSection || null);
+      } catch (e) {
+        console.error('Ошибка при восстановлении состояния:', e);
       }
-      return [...prev, problem];
-    });
+    }
+  }, []);
+  
+  useEffect(() => {
+    localStorage.setItem('ux_analysis_practice_state', JSON.stringify({
+      segmentNotes,
+      journeyNotes,
+      improvementPlan,
+      selectedProblems,
+      selectedSolution,
+      activeSection
+    }));
+  }, [segmentNotes, journeyNotes, improvementPlan, selectedProblems, selectedSolution, activeSection]);
+  
+  const [userSegments, setUserSegments] = useState<UserSegment[]>([
+    {
+      id: "new_users",
+      name: "Новые пользователи",
+      description: "Пользователи, которые зарегистрировались в TaskMaster недавно",
+      painPoints: [
+        "Сложность в понимании интерфейса",
+        "Трудности с созданием первых задач",
+        "Неуверенность в правильности заполнения полей"
+      ],
+      insights: [
+        "Нуждаются в подсказках и обучении",
+        "Предпочитают простые формы с минимумом полей",
+        "Ценят быстрое достижение результата"
+      ]
+    },
+    {
+      id: "power_users",
+      name: "Опытные пользователи",
+      description: "Пользователи, которые используют TaskMaster ежедневно",
+      painPoints: [
+        "Недостаточно гибкие настройки",
+        "Ограниченные возможности для продвинутого использования",
+        "Потеря времени на рутинные действия"
+      ],
+      insights: [
+        "Ценят горячие клавиши и быстрый доступ",
+        "Готовы к более сложному интерфейсу ради функциональности",
+        "Предпочитают настраиваемые шаблоны"
+      ]
+    },
+    {
+      id: "mobile_users",
+      name: "Мобильные пользователи",
+      description: "Пользователи, которые в основном работают с мобильной версией",
+      painPoints: [
+        "Неоптимизированный интерфейс для маленьких экранов",
+        "Сложность ввода на мобильной клавиатуре",
+        "Длительное время загрузки"
+      ],
+      insights: [
+        "Используют приложение в дороге или между задачами",
+        "Ценят минимализм и быстродействие",
+        "Предпочитают визуальные элементы текстовым"
+      ]
+    }
+  ]);
+  
+  const [userJourney, setUserJourney] = useState<UserJourneyStep[]>([
+    {
+      id: "discover",
+      name: "Обнаружение",
+      description: "Пользователь решает создать новую задачу",
+      painPoints: [
+        "Кнопка 'Создать задачу' не всегда заметна",
+        "Пользователь не уверен, какой тип задачи выбрать"
+      ]
+    },
+    {
+      id: "basic_info",
+      name: "Основная информация",
+      description: "Заполнение обязательных полей задачи",
+      painPoints: [
+        "Слишком много обязательных полей",
+        "Неясные требования к заполнению",
+        "Сложные поля без подсказок"
+      ]
+    },
+    {
+      id: "details",
+      name: "Детализация",
+      description: "Добавление дополнительной информации",
+      painPoints: [
+        "Неочевидная необходимость дополнительных полей",
+        "Избыточные поля для простых задач",
+        "Сложная навигация между группами полей"
+      ]
+    },
+    {
+      id: "review",
+      name: "Проверка",
+      description: "Финальный просмотр и создание задачи",
+      painPoints: [
+        "Нет понятного предпросмотра задачи",
+        "Слишком долгое время сохранения на мобильных устройствах",
+        "Сложно вернуться к редактированию предыдущих шагов"
+      ]
+    }
+  ]);
+  
+  const handleProblemSelect = (problemId: string) => {
+    if (selectedProblems.includes(problemId)) {
+      setSelectedProblems(selectedProblems.filter(id => id !== problemId));
+    } else {
+      setSelectedProblems([...selectedProblems, problemId]);
+    }
   };
   
-  const handleSolutionSelect = (solution: string) => {
-    setSelectedSolution(solution);
+  const handleSolutionSelect = (solutionId: string) => {
+    setSelectedSolution(solutionId);
   };
   
-  const handleImprovementToggle = (improvement: string) => {
+  const handleImprovementToggle = (key: string) => {
     setImprovementPlan(prev => ({
       ...prev,
-      [improvement]: !prev[improvement]
+      [key]: !prev[key]
     }));
   };
   
-  const analyzeInsight = (insight: string, type: 'segment' | 'step'): { score: number, feedback: string } => {
-    let score = 0;
-    let feedback = '';
-    
-    if (insight.length < 50) {
-      return { 
-        score: 0, 
-        feedback: 'Ваше решение слишком короткое. Попробуйте более детально описать ваши идеи и как они решают выявленные проблемы.' 
-      };
-    }
-    
-    // Check for specific UX terms and concepts
-    const uxTerms = [
-      'пользовательский опыт', 'юзабилити', 'интерфейс', 'доступность', 
-      'интуитивность', 'взаимодействие', 'удобство', 'простота', 'эффективность'
-    ];
-    
-    uxTerms.forEach(term => {
-      if (insight.toLowerCase().includes(term.toLowerCase())) {
-        score += 1;
-      }
-    });
-    
-    // Check if the insight addresses specific pain points
-    const relevantPainPoints = type === 'segment' 
-      ? userSegments.find(s => s.id === selectedSegment)?.painPoints || []
-      : userJourneySteps.find(s => s.id === selectedStep)?.painPoints || [];
-    
-    let addressedPainPoints = 0;
-    relevantPainPoints.forEach(point => {
-      const keywords = point.toLowerCase().split(' ').filter(word => word.length > 4);
-      if (keywords.some(keyword => insight.toLowerCase().includes(keyword))) {
-        addressedPainPoints += 1;
-      }
-    });
-    
-    score += Math.min(3, addressedPainPoints);
-    
-    // Check for solution specificity
-    if (insight.includes('конкретно') || insight.includes('специально') || 
-        insight.includes('именно') || insight.includes('точно')) {
-      score += 1;
-    }
-    
-    // Check for mentioning metrics or measurements
-    if (insight.includes('метрик') || insight.includes('измер') || 
-        insight.includes('конверси') || insight.includes('успешност') ||
-        insight.includes('эффективност') || insight.includes('время')) {
-      score += 1;
-    }
-    
-    // Generate feedback based on score
-    if (score >= 7) {
-      feedback = 'Отличный анализ! Вы предложили конкретное решение, которое напрямую адресует выявленные проблемы пользователей. Ваш подход демонстрирует глубокое понимание принципов UX и фокус на улучшении пользовательского опыта.';
-      return { score, feedback };
-    } else if (score >= 4) {
-      feedback = 'Хороший анализ. Вы определили некоторые ключевые проблемы и предложили разумные решения. Для улучшения можно было бы более конкретно связать ваши предложения с выявленными болевыми точками пользователей и упомянуть, как вы будете измерять успех изменений.';
-      return { score, feedback };
-    } else {
-      feedback = 'Ваш анализ можно улучшить. Постарайтесь более конкретно обратиться к болевым точкам пользователей и предложить решения, которые напрямую их адресуют. Используйте терминологию UX и объясните, как ваши предложения улучшат пользовательский опыт.';
-      return { score, feedback };
+  // Функция для плавного скролла к разделу
+  const scrollToSection = (sectionId: string) => {
+    const element = document.getElementById(sectionId);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth' });
+      setActiveSection(sectionId);
     }
   };
-  
-  const handleSubmit = () => {
-    if (userInsight.trim()) {
-      const type = activeTab === 'userSegments' ? 'segment' : 'step';
-      const result = analyzeInsight(userInsight, type);
-      
-      setFeedback(result.feedback);
-      
-      if (result.score >= 7) {
-        setFeedbackType('excellent');
-      } else if (result.score >= 4) {
-        setFeedbackType('good');
-      } else {
-        setFeedbackType('average');
-      }
-      
-      setSubmitted(true);
-    }
-  };
-  
-  const renderUserSegments = () => {
-    return (
-      <div className={styles.segmentsContainer}>
-        <div className={styles.segmentsList}>
-          {userSegments.map(segment => (
-            <div 
-              key={segment.id}
-              className={`${styles.segmentCard} ${selectedSegment === segment.id ? styles.segmentCardSelected : ''}`}
-              onClick={() => handleSegmentSelect(segment.id)}
-            >
-              <h3 className={styles.segmentName}>{segment.name}</h3>
-              <p className={styles.segmentDescription}>{segment.description}</p>
-            </div>
-          ))}
-        </div>
-        
-        {selectedSegment && (
-          <div className={styles.segmentDetails}>
-            <h3 className={styles.detailsTitle}>Болевые точки</h3>
-            <ul className={styles.painPointsList}>
-              {userSegments.find(s => s.id === selectedSegment)?.painPoints.map((point, index) => (
-                <li key={index} className={styles.painPoint}>{point}</li>
-              ))}
-            </ul>
-            
-            <h3 className={styles.practiceTitle}>Практическое задание</h3>
-            <p className={styles.practiceDescription}>
-              На основе анализа болевых точек данного сегмента пользователей, предложите UX-решение, 
-              которое могло бы улучшить процесс создания задач именно для этой группы. 
-              Будьте конкретны и обоснуйте, как ваше решение адресует выявленные проблемы.
-            </p>
-            
-            <textarea 
-              className={styles.textarea}
-              placeholder="Опишите ваше UX-решение здесь..."
-              value={userInsight}
-              onChange={handleInsightChange}
-              rows={6}
-            />
-            
-            <button 
-              className={styles.btnPrimary}
-              onClick={handleSubmit}
-              disabled={!userInsight.trim()}
-            >
-              Получить обратную связь
-            </button>
-            
-            {submitted && feedback && (
-              <div className={`${styles.feedbackBox} ${styles[`feedback${feedbackType.charAt(0).toUpperCase() + feedbackType.slice(1)}`]}`}>
-                <h3 className={styles.feedbackTitle}>
-                  {feedbackType === 'excellent' ? 'Отлично!' : 
-                   feedbackType === 'good' ? 'Хорошо!' : 
-                   feedbackType === 'average' ? 'Неплохо!' : 'Можно лучше!'}
-                </h3>
-                <p className={styles.feedbackText}>{feedback}</p>
-                
-                {feedbackType === 'excellent' && (
-                  <div className={styles.exampleSolution}>
-                    <h4 className={styles.exampleTitle}>Пример возможного решения:</h4>
-                    <p className={styles.exampleText}>
-                      {userSegments.find(s => s.id === selectedSegment)?.insights[0]}
-                    </p>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-    );
-  };
-  
-  const renderUserJourney = () => {
-    return (
-      <div className={styles.journeyContainer}>
-        <div className={styles.journeySteps}>
-          {userJourneySteps.map((step, index) => (
-            <div 
-              key={step.id}
-              className={`${styles.journeyStep} ${selectedStep === step.id ? styles.journeyStepSelected : ''}`}
-              onClick={() => handleStepSelect(step.id)}
-            >
-              <div className={styles.stepNumber}>{index + 1}</div>
-              <div className={styles.stepContent}>
-                <h3 className={styles.stepName}>{step.name}</h3>
-                <p className={styles.stepBrief}>{step.description.substring(0, 60)}...</p>
-              </div>
-            </div>
-          ))}
-        </div>
-        
-        {selectedStep && (
-          <div className={styles.stepDetails}>
-            <h3 className={styles.detailsTitle}>{userJourneySteps.find(s => s.id === selectedStep)?.name}</h3>
-            <p className={styles.stepDescription}>
-              {userJourneySteps.find(s => s.id === selectedStep)?.description}
-            </p>
-            
-            <h3 className={styles.detailsSubtitle}>Болевые точки на этом этапе</h3>
-            <ul className={styles.painPointsList}>
-              {userJourneySteps.find(s => s.id === selectedStep)?.painPoints.map((point, index) => (
-                <li key={index} className={styles.painPoint}>{point}</li>
-              ))}
-            </ul>
-            
-            <h3 className={styles.practiceTitle}>Практическое задание</h3>
-            <p className={styles.practiceDescription}>
-              Проанализируйте болевые точки на данном этапе пользовательского пути и предложите 
-              UX-решение, которое улучшит опыт пользователя. Будьте конкретны и обоснуйте, 
-              как ваше решение адресует выявленные проблемы.
-            </p>
-            
-            <textarea 
-              className={styles.textarea}
-              placeholder="Опишите ваше UX-решение здесь..."
-              value={userInsight}
-              onChange={handleInsightChange}
-              rows={6}
-            />
-            
-            <button 
-              className={styles.btnPrimary}
-              onClick={handleSubmit}
-              disabled={!userInsight.trim()}
-            >
-              Получить обратную связь
-            </button>
-            
-            {submitted && feedback && (
-              <div className={`${styles.feedbackBox} ${styles[`feedback${feedbackType.charAt(0).toUpperCase() + feedbackType.slice(1)}`]}`}>
-                <h3 className={styles.feedbackTitle}>
-                  {feedbackType === 'excellent' ? 'Отлично!' : 
-                   feedbackType === 'good' ? 'Хорошо!' : 
-                   feedbackType === 'average' ? 'Неплохо!' : 'Можно лучше!'}
-                </h3>
-                <p className={styles.feedbackText}>{feedback}</p>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-    );
-  };
-  
+
+  // Определяем содержимое шагов
   const stepsContent = [
-    // Шаг 1: Введение в практическое задание
-    <div key="intro" className={styles.section}>
-      <h1 className={styles.header}>UX-анализ: практика</h1>
-      
-      <div className="bg-slate-800/50 p-6 rounded-lg border border-slate-700 mb-8">
-        <h2 className={styles.subheader}>Практическое задание по UX-анализу</h2>
-        <p className={styles.text}>
+    // Шаг 1: Введение
+    <div key="introduction">
+      <motion.div 
+        className="mb-10"
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+      >
+        <h1 className="text-3xl font-bold text-white mb-4">UX-анализ: практика</h1>
+        <p className="text-slate-400 italic max-w-3xl">
           В этом практическом задании вы будете применять принципы UX-анализа для улучшения процесса создания задачи в приложении TaskMaster.
-          Вам предстоит проанализировать пользовательские сегменты и путь пользователя, выявить проблемы и предложить решения.
         </p>
-        
-        <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="bg-indigo-900/30 p-4 rounded-lg">
-            <h3 className="text-indigo-400 font-semibold mb-2">Анализ сегментов пользователей</h3>
-            <p className="text-slate-300">
-              Изучите различные группы пользователей, их потребности и проблемы, с которыми они сталкиваются
-              при создании задач в TaskMaster.
-            </p>
-          </div>
+      </motion.div>
+      
+      <GradientSection
+        title="Практическое задание по UX-анализу"
+        colorScheme="indigo"
+        bordered
+        rounded
+        withAnimation
+      >
+        <div className="text-slate-300 mb-6">
+          <p className="mb-4">
+            В этом практическом задании вы будете применять принципы UX-анализа для улучшения процесса создания задачи в приложении TaskMaster.
+            Вам предстоит проанализировать пользовательские сегменты и путь пользователя, выявить проблемы и предложить решения.
+          </p>
           
-          <div className="bg-indigo-900/30 p-4 rounded-lg">
-            <h3 className="text-indigo-400 font-semibold mb-2">Анализ пути пользователя</h3>
-            <p className="text-slate-300">
-              Исследуйте каждый шаг пользователя при создании задачи, выявите проблемные места
-              и предложите улучшения для оптимизации процесса.
-            </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+            <div className="bg-indigo-900/30 p-4 rounded-lg">
+              <h3 className="text-indigo-400 font-semibold mb-2">Анализ сегментов пользователей</h3>
+              <p className="text-slate-300">
+                Изучите различные группы пользователей, их потребности и проблемы, с которыми они сталкиваются
+                при создании задач в TaskMaster.
+              </p>
+            </div>
+            
+            <div className="bg-indigo-900/30 p-4 rounded-lg">
+              <h3 className="text-indigo-400 font-semibold mb-2">Анализ пути пользователя</h3>
+              <p className="text-slate-300">
+                Исследуйте каждый шаг пользователя при создании задачи, выявите проблемные места
+                и предложите улучшения для оптимизации процесса.
+              </p>
+            </div>
           </div>
         </div>
-      </div>
-      
-      <MentorTip
-        tip="В этом задании важно не только выявить проблемы, но и предложить конкретные решения, основанные на принципах UX-дизайна, которые вы изучили в теоретической части."
-        position="bottom-right"
-      />
+        
+        <MentorTip
+          tip="В этом задании важно не только выявить проблемы, но и предложить конкретные решения, основанные на принципах UX-дизайна, которые вы изучили в теоретической части."
+          position="bottom-right"
+          avatar="/characters/avatar_mentor.png"
+          name="Ментор"
+        />
+      </GradientSection>
     </div>,
     
-    // Шаг 2: Анализ пользовательских сегментов
-    <div key="user-segments" className={styles.section}>
-      {renderUserSegments()}
+    // Шаг 2: Анализ сегментов пользователей
+    <div key="userSegments">
+      <GradientSection
+        title="Анализ пользовательских сегментов"
+        subtitle="Изучите различные группы пользователей и их потребности"
+        colorScheme="indigo"
+        bordered
+        rounded
+        withAnimation
+      >
+        <p className="text-slate-300 mb-4">
+          Изучите сегменты пользователей TaskMaster и их особенности:
+        </p>
+        
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          {userSegments.map(segment => (
+            <InfoCard
+              key={segment.id}
+              title={segment.name}
+              description={
+                <div>
+                  <p className="mb-2">{segment.description}</p>
+                  <h4 className="font-semibold text-indigo-300 mt-3 mb-1">Проблемы:</h4>
+                  <ul className="list-disc list-inside text-sm">
+                    {segment.painPoints.map((point, idx) => (
+                      <li key={idx}>{point}</li>
+                    ))}
+                  </ul>
+                  <h4 className="font-semibold text-indigo-300 mt-3 mb-1">Инсайты:</h4>
+                  <ul className="list-disc list-inside text-sm">
+                    {segment.insights.map((insight, idx) => (
+                      <li key={idx}>{insight}</li>
+                    ))}
+                  </ul>
+                </div>
+              }
+              variant="highlighted"
+            />
+          ))}
+        </div>
+        
+        <div className="mb-6">
+          <h3 className="text-lg font-semibold text-white mb-2">Ваши заметки по сегментам:</h3>
+          <textarea
+            className="w-full bg-slate-800 text-white p-4 rounded border border-slate-600 min-h-32"
+            placeholder="Запишите ваши наблюдения о пользовательских сегментах и их потребностях..."
+            value={segmentNotes}
+            onChange={(e) => setSegmentNotes(e.target.value)}
+          />
+        </div>
+        
+        <MentorTip
+          tip="Анализ пользовательских сегментов помогает лучше понять разнообразие потребностей. При разработке UX важно учитывать особенности каждого сегмента, но при этом не перегружать интерфейс."
+          position="right-bottom"
+          avatar="/characters/avatar_mentor.png"
+          name="Ментор"
+        />
+      </GradientSection>
     </div>,
     
     // Шаг 3: Анализ пути пользователя
-    <div key="user-journey" className={styles.section}>
-      {renderUserJourney()}
-    </div>,
-    
-    // Шаг 4: Заключение и рекомендации
-    <div key="conclusion" className={styles.section}>
-      <h2 className={styles.subheader}>Заключение и рекомендации</h2>
-      
-      <div className="bg-slate-800/50 p-6 rounded-lg border border-slate-700 mb-8">
-        <p className={styles.text}>
-          Поздравляем с завершением практического задания по UX-анализу! 
-          Вы проанализировали различные аспекты пользовательского опыта и предложили решения 
-          для улучшения процесса создания задач в TaskMaster.
+    <div key="userJourney">
+      <GradientSection
+        title="Исследуйте каждый шаг процесса создания задачи"
+        subtitle="Проанализируйте каждый этап процесса создания задачи и выделите проблемные места,
+        которые мешают пользователям эффективно работать с TaskMaster."
+        colorScheme="indigo"
+        bordered
+        rounded
+        withAnimation
+      >
+        <p className="text-slate-300 mb-4">
+          Рассмотрите каждый этап создания задачи в TaskMaster:
         </p>
         
-        <div className="mt-6">
-          <h3 className="text-indigo-400 font-semibold mb-4">Ключевые выводы:</h3>
-          <ul className="list-disc list-inside text-slate-300 space-y-2">
-            <li>Разные сегменты пользователей имеют специфические потребности и сталкиваются с разными проблемами</li>
-            <li>Каждый шаг в пути пользователя может быть оптимизирован для повышения эффективности</li>
-            <li>Баланс между простотой для новичков и функциональностью для опытных пользователей критически важен</li>
-            <li>Мобильный опыт требует особого внимания и адаптации интерфейса</li>
-          </ul>
+        <div className="space-y-4 mb-6">
+          {userJourney.map((step, index) => (
+            <div key={step.id} className="bg-slate-800/50 p-4 rounded-lg border border-slate-700">
+              <div className="flex items-start">
+                <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center flex-shrink-0">
+                  <span className="text-white font-semibold">{index + 1}</span>
+                </div>
+                <div className="ml-4">
+                  <h3 className="text-xl font-semibold text-white">{step.name}</h3>
+                  <p className="text-slate-300 mb-3">{step.description}</p>
+                  
+                  <h4 className="text-indigo-400 font-semibold mb-2">Болевые точки:</h4>
+                  <ul className="list-disc list-inside text-slate-300 space-y-1">
+                    {step.painPoints.map((point, idx) => (
+                      <li key={idx}>{point}</li>
+                    ))}
+                  </ul>
+                  
+                  <div className="mt-4">
+                    <h4 className="text-indigo-400 font-semibold mb-2">Возможные улучшения:</h4>
+                    <div className="space-y-2">
+                      {[
+                        { id: `${step.id}_1`, label: "Упростить интерфейс" },
+                        { id: `${step.id}_2`, label: "Добавить подсказки" },
+                        { id: `${step.id}_3`, label: "Оптимизировать для мобильных" }
+                      ].map(improvement => (
+                        <label key={improvement.id} className="flex items-center space-x-2 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={improvementPlan[improvement.id] || false}
+                            onChange={() => handleImprovementToggle(improvement.id)}
+                            className="rounded border-slate-500 text-indigo-500 focus:ring-indigo-500"
+                          />
+                          <span className="text-slate-300">{improvement.label}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
-      </div>
-      
-      <MentorTip
-        tip="Помните, что UX-анализ — это непрерывный процесс. Продолжайте собирать обратную связь, тестировать решения и итеративно улучшать пользовательский опыт."
-        position="bottom-right"
-      />
+        
+        <div className="mb-6">
+          <h3 className="text-lg font-semibold text-white mb-2">Ваши идеи по улучшению:</h3>
+          <textarea
+            className="w-full bg-slate-800 text-white p-4 rounded border border-slate-600 min-h-32"
+            placeholder="Запишите ваши идеи по улучшению пользовательского пути..."
+            value={journeyNotes}
+            onChange={(e) => setJourneyNotes(e.target.value)}
+          />
+        </div>
+        
+        <MentorTip
+          tip="При анализе пути пользователя важно выявить наиболее проблемные этапы и сфокусироваться на их улучшении. Иногда достаточно небольших изменений, чтобы значительно улучшить общий опыт."
+          position="bottom-left"
+          avatar="/characters/avatar_mentor.png"
+          name="Ментор"
+        />
+      </GradientSection>
+    </div>,
+    
+    // Шаг 4: Заключение
+    <div key="conclusion">
+      <GradientSection
+        title="Заключение и рекомендации"
+        subtitle="Ключевые выводы и рекомендации"
+        colorScheme="indigo"
+        bordered
+        rounded
+        withAnimation
+      >
+        <div className="text-slate-300">
+          <p className="mb-4">
+            Поздравляем с завершением практического задания по UX-анализу! 
+            Вы проанализировали различные аспекты пользовательского опыта и предложили решения 
+            для улучшения процесса создания задач в TaskMaster.
+          </p>
+          
+          <div className="mt-6">
+            <h3 className="text-indigo-400 font-semibold mb-4">Ключевые выводы:</h3>
+            <ul className="list-disc list-inside text-slate-300 space-y-2">
+              <li>Разные сегменты пользователей имеют специфические потребности и сталкиваются с разными проблемами</li>
+              <li>Каждый шаг в пути пользователя может быть оптимизирован для повышения эффективности</li>
+              <li>Баланс между простотой для новичков и функциональностью для опытных пользователей критически важен</li>
+              <li>Мобильный опыт требует особого внимания и адаптации интерфейса</li>
+            </ul>
+          </div>
+        </div>
+      </GradientSection>
     </div>
   ];
-
+  
   return (
     <div className={styles.container}>
-      <StepNavigation
+      <StepNavigation 
         steps={stepsContent}
         onComplete={onComplete}
         showBackButton={true}
@@ -521,6 +566,9 @@ const UXAnalysisPractice: React.FC<UXAnalysisPracticeProps> = ({ onComplete }) =
         completeButtonText="Завершить"
         showProgress={true}
         showStepNumbers={true}
+        currentStep={currentStep}
+        onStepChange={setCurrentStep}
+        persistStepKey="ux_analysis_practice_step"
       />
     </div>
   );

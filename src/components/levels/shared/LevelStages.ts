@@ -5,9 +5,8 @@ export { LevelStage };
 
 // Последовательность этапов уровня 1
 export const LEVEL_STAGE_SEQUENCE: LevelStage[] = [
-  LevelStage.INTRODUCTION,
-  LevelStage.TEAM_MEETING,
-  LevelStage.PRODUCT_MINDSET_THEORY,
+  LevelStage.INTRO,
+  LevelStage.PRODUCT_THINKING_THEORY,
   LevelStage.PRODUCT_THINKING_PRACTICE,
   LevelStage.UX_ANALYSIS_THEORY,
   LevelStage.UX_ANALYSIS_PRACTICE,
@@ -34,21 +33,20 @@ export const getPreviousStage = (currentStage: LevelStage): LevelStage | null =>
 
 // Получение названия этапа
 export const getStageName = (stage: LevelStage): string => {
-  const stageNames: Record<LevelStage, string> = {
+  const stageNames = {
     // Этапы первого уровня
-    [LevelStage.INTRODUCTION]: 'Введение',
-    [LevelStage.TEAM_MEETING]: 'Встреча с командой',
-    [LevelStage.PRODUCT_MINDSET_THEORY]: 'Теория продуктового мышления',
-    [LevelStage.PRODUCT_THINKING_PRACTICE]: 'Практика продуктового мышления',
-    [LevelStage.UX_ANALYSIS_THEORY]: 'Теория UX-анализа',
-    [LevelStage.UX_ANALYSIS_PRACTICE]: 'Практика UX-анализа',
-    [LevelStage.METRICS_THEORY]: 'Теория метрик',
-    [LevelStage.METRICS_PRACTICE]: 'Практика по метрикам',
-    [LevelStage.DECISION_MAKING_THEORY]: 'Теория принятия решений',
-    [LevelStage.DECISION_MAKING_PRACTICE]: 'Практика принятия решений',
+    [LevelStage.INTRO]: 'Введение',
+    [LevelStage.PRODUCT_THINKING_THEORY]: 'Продуктовое мышление: теория',
+    [LevelStage.PRODUCT_THINKING_PRACTICE]: 'Продуктовое мышление: практика',
+    [LevelStage.UX_ANALYSIS_THEORY]: 'UX анализ: теория',
+    [LevelStage.UX_ANALYSIS_PRACTICE]: 'UX анализ: практика',
+    [LevelStage.METRICS_THEORY]: 'Метрики: теория',
+    [LevelStage.METRICS_PRACTICE]: 'Метрики: практика',
+    [LevelStage.DECISION_MAKING_THEORY]: 'Принятие решений: теория',
+    [LevelStage.DECISION_MAKING_PRACTICE]: 'Принятие решений: практика',
     [LevelStage.FEEDBACK]: 'Обратная связь',
-    [LevelStage.QUIZ]: 'Тест',
-    [LevelStage.COMPLETE]: 'Завершение уровня',
+    [LevelStage.QUIZ]: 'Финальный тест',
+    [LevelStage.COMPLETE]: 'Завершение',
 
     // Этапы второго уровня
     [LevelStage.STAKEHOLDERS_THEORY]: 'Теория стейкхолдеров',
@@ -64,5 +62,5 @@ export const getStageName = (stage: LevelStage): string => {
     [LevelStage.PRESENTATION_THEORY]: 'Теория презентации',
     [LevelStage.PRESENTATION_PRACTICE]: 'Практика презентации'
   };
-  return stageNames[stage];
+  return stageNames[stage] || 'Неизвестный этап';
 }; 

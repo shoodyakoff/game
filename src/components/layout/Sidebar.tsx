@@ -139,13 +139,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activePage }) => {
       {/* Блок поддержки */}
       <div className="card p-4 bg-gradient-to-r from-indigo-600 to-purple-600">
         <h3 className="font-bold text-lg mb-2">Нужна помощь?</h3>
-        <p className="text-slate-200 text-sm mb-3">Посетите наш справочный центр, если у вас возникли вопросы.</p>
-        <Link 
-          href="/help" 
-          className="inline-block bg-white/20 hover:bg-white/30 text-white px-3 py-1 rounded text-sm font-medium transition-colors"
-        >
-          Поддержка
-        </Link>
+        <p className="text-slate-200 text-sm mb-3">Напишите нам на почту s.hoodyakoff.accs@gmail.com</p>
       </div>
     </div>
   );

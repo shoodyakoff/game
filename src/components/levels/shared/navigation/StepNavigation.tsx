@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 export interface StepNavigationProps {
   steps: React.ReactNode[];
@@ -8,6 +8,10 @@ export interface StepNavigationProps {
   completeButtonText?: string;
   showProgress?: boolean;
   showStepNumbers?: boolean;
+  currentStep?: number;
+  onStepChange?: (step: number) => void;
+  persistStepKey?: string;
+  showOnlyCurrentStep?: boolean;
 }
 
 const StepNavigation: React.FC<StepNavigationProps> = ({
@@ -17,17 +21,58 @@ const StepNavigation: React.FC<StepNavigationProps> = ({
   continueButtonText = 'Продолжить',
   completeButtonText = 'Далее',
   showProgress = true,
-  showStepNumbers = true
+  showStepNumbers = true,
+  currentStep: externalCurrentStep,
+  onStepChange,
+  persistStepKey,
+  showOnlyCurrentStep = false
 }) => {
-  const [currentStep, setCurrentStep] = useState(0);
+  // Используем управляемый (controlled) или неуправляемый (uncontrolled) режим в зависимости от наличия props
+  const [internalCurrentStep, setInternalCurrentStep] = useState(0);
+  
+  // Определяем, какой state используем
+  const currentStep = externalCurrentStep !== undefined ? externalCurrentStep : internalCurrentStep;
+  
+  // Обработчик изменения шага для обоих режимов
+  const handleStepChange = (newStep: number) => {
+    if (onStepChange) {
+      onStepChange(newStep);
+    } else {
+      setInternalCurrentStep(newStep);
+    }
+    
+    // Сохраняем в localStorage, если указан ключ
+    if (persistStepKey && typeof window !== 'undefined') {
+      localStorage.setItem(persistStepKey, newStep.toString());
+    }
+  };
+  
+  // Загружаем сохраненное значение при инициализации
+  useEffect(() => {
+    if (persistStepKey && typeof window !== 'undefined' && externalCurrentStep === undefined) {
+      const savedStep = localStorage.getItem(persistStepKey);
+      if (savedStep) {
+        const step = parseInt(savedStep, 10);
+        setInternalCurrentStep(step);
+      }
+    }
+  }, [persistStepKey, externalCurrentStep]);
   
   const handleNext = () => {
     if (currentStep < steps.length - 1) {
-      setCurrentStep(currentStep + 1);
+      handleStepChange(currentStep + 1);
       setTimeout(() => {
         const stepElement = document.getElementById(`step-content-${currentStep + 1}`);
         if (stepElement) {
-          stepElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          // Скролл с учетом высоты верхнего навбара (добавляем отступ около 100px)
+          const navbarHeight = 80; // Примерная высота навбара
+          const elementPosition = stepElement.getBoundingClientRect().top + window.pageYOffset;
+          const offsetPosition = elementPosition - navbarHeight;
+          
+          window.scrollTo({
+            top: offsetPosition,
+            behavior: 'smooth'
+          });
         }
       }, 100);
     } else {
@@ -37,11 +82,19 @@ const StepNavigation: React.FC<StepNavigationProps> = ({
   
   const handleBack = () => {
     if (currentStep > 0) {
-      setCurrentStep(currentStep - 1);
+      handleStepChange(currentStep - 1);
       setTimeout(() => {
         const stepElement = document.getElementById(`step-content-${currentStep - 1}`);
         if (stepElement) {
-          stepElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          // Скролл с учетом высоты верхнего навбара (добавляем отступ около 100px)
+          const navbarHeight = 80; // Примерная высота навбара
+          const elementPosition = stepElement.getBoundingClientRect().top + window.pageYOffset;
+          const offsetPosition = elementPosition - navbarHeight;
+          
+          window.scrollTo({
+            top: offsetPosition,
+            behavior: 'smooth'
+          });
         }
       }, 100);
     }
@@ -50,22 +103,30 @@ const StepNavigation: React.FC<StepNavigationProps> = ({
   const handleScrollToStep = (stepIndex: number) => {
     const stepElement = document.getElementById(`step-content-${stepIndex}`);
     if (stepElement) {
-      stepElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      // Скролл с учетом высоты верхнего навбара
+      const navbarHeight = 80; // Примерная высота навбара
+      const elementPosition = stepElement.getBoundingClientRect().top + window.pageYOffset;
+      const offsetPosition = elementPosition - navbarHeight;
+      
+      window.scrollTo({
+        top: offsetPosition,
+        behavior: 'smooth'
+      });
     }
   };
   
   return (
     <div className="step-navigation">
       <div className="step-content mb-6">
-        {steps.slice(0, currentStep + 1).map((step, index) => (
+        {(showOnlyCurrentStep ? steps.slice(currentStep, currentStep + 1) : steps.slice(0, currentStep + 1)).map((step, index) => (
           <div 
-            key={index} 
-            id={`step-content-${index}`} 
-            className={`py-6 ${index !== 0 ? 'border-t border-gray-700 mt-8' : ''}`}
+            key={showOnlyCurrentStep ? currentStep : index} 
+            id={`step-content-${showOnlyCurrentStep ? currentStep : index}`} 
+            className={`py-6 ${index !== 0 && !showOnlyCurrentStep ? 'border-t border-gray-700 mt-8' : 'mt-4'}`}
           >
             {showStepNumbers && (
               <div className="text-sm text-slate-400 mb-4">
-                Шаг {index + 1} из {steps.length}
+                Шаг {showOnlyCurrentStep ? currentStep + 1 : index + 1} из {steps.length}
               </div>
             )}
             {step}

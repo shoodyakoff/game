@@ -3,6 +3,7 @@ import { styles } from '../common/styles';
 import { decisionAlternatives, decisionCriteria, businessContext, feedbackTexts } from '../data/decisionMakingData';
 import StepNavigation from '../../shared/navigation/StepNavigation';
 import MentorTip from '../../shared/feedback/MentorTip';
+import { isLevelReset } from '../../shared/utils/levelResetUtils';
 
 type DecisionMakingPracticeProps = {
   onComplete: () => void;
@@ -15,6 +16,33 @@ const DecisionMakingPractice = ({ onComplete }: DecisionMakingPracticeProps) => 
   const [showFeedback, setShowFeedback] = useState(false);
   const [feedbackLevel, setFeedbackLevel] = useState<'excellent' | 'good' | 'average' | 'poor'>('average');
   const [weightedScores, setWeightedScores] = useState<{[key: number]: number}>({});
+  // Состояние для текущего шага
+  const [currentStep, setCurrentStep] = useState<number>(0);
+  
+  // При монтировании компонента проверяем, был ли сброс уровня
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      // Проверяем, был ли сброс уровня
+      const isReset = isLevelReset(1);
+      
+      if (isReset) {
+        // Если был сброс, устанавливаем шаг на 0
+        localStorage.setItem('decision_making_practice_step', '0');
+        setCurrentStep(0);
+        // Сбрасываем состояние практики
+        setSelectedAlternative(null);
+        setJustification('');
+        setShowFeedback(false);
+        // Другие сбросы состояния...
+      } else {
+        // Если не было сброса, пробуем загрузить сохраненный шаг
+        const savedStep = localStorage.getItem('decision_making_practice_step');
+        if (savedStep) {
+          setCurrentStep(parseInt(savedStep, 10));
+        }
+      }
+    }
+  }, []);
 
   useEffect(() => {
     // Инициализация пустых рейтингов для всех альтернатив и критериев
@@ -427,7 +455,7 @@ const DecisionMakingPractice = ({ onComplete }: DecisionMakingPracticeProps) => 
 
   return (
     <div className={styles.container}>
-      <StepNavigation
+      <StepNavigation 
         steps={stepsContent}
         onComplete={onComplete}
         showBackButton={true}
@@ -435,6 +463,9 @@ const DecisionMakingPractice = ({ onComplete }: DecisionMakingPracticeProps) => 
         completeButtonText="Завершить"
         showProgress={true}
         showStepNumbers={true}
+        currentStep={currentStep}
+        onStepChange={setCurrentStep}
+        persistStepKey="decision_making_practice_step"
       />
     </div>
   );
