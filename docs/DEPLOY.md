@@ -207,3 +207,57 @@ ls -la backup/
 Время тестирования: 14 апреля 2023 года.
 
    Привет андрей
+
+## Использование мок-режима для локального тестирования и CI/CD
+
+Для локальной разработки или в средах, где недоступны API ключи Clerk, можно использовать мок-режим аутентификации.
+
+### Настройка мок-режима
+
+1. **Включите мок-режим через переменные окружения:**
+   ```
+   NEXT_PUBLIC_CLERK_MOCK_MODE=true
+   NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY="placeholder_key_for_mock_mode"
+   ```
+
+2. **Сборка приложения в мок-режиме:**
+   ```bash
+   npm run build:mock
+   ```
+
+3. **Сборка Docker-контейнера в мок-режиме:**
+   ```bash
+   docker build -f Dockerfile.mock -t gotogrow:mock .
+   ```
+
+4. **Запуск контейнера в мок-режиме:**
+   ```bash
+   docker run -it --rm -p 3000:3000 gotogrow:mock
+   ```
+
+### CI/CD с мок-режимом
+
+При настройке CI/CD пайплайнов для тестирования без реальных ключей API:
+
+1. **В GitHub Actions или другой CI-системе:**
+   ```yaml
+   env:
+     NEXT_PUBLIC_CLERK_MOCK_MODE: 'true'
+     NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: 'placeholder_key_for_mock_mode'
+   ```
+
+2. **Для выполнения тестов:**
+   ```yaml
+   - name: Build and test
+     run: |
+       npm run build:mock
+       npm test
+   ```
+
+### Переключение между режимами
+
+Приложение имеет встроенную логику для автоматического определения режима работы:
+- При наличии переменной `NEXT_PUBLIC_CLERK_MOCK_MODE=true` используется мок-аутентификация
+- В остальных случаях используется стандартный режим с реальным Clerk API
+
+При деплое на продакшн убедитесь, что переменная `NEXT_PUBLIC_CLERK_MOCK_MODE` не установлена или установлена в `false`.
