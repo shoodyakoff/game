@@ -217,12 +217,16 @@ ls -la backup/
 1. **Включите мок-режим через переменные окружения:**
    ```
    NEXT_PUBLIC_CLERK_MOCK_MODE=true
-   NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY="placeholder_key_for_mock_mode"
+   NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY="mock_key_not_for_validation"
    ```
 
 2. **Сборка приложения в мок-режиме:**
    ```bash
+   # Стандартная сборка в мок-режиме
    npm run build:mock
+   
+   # Сборка с патчингом проблемных модулей Clerk (рекомендуется для CI/CD)
+   npm run build:mock-patched
    ```
 
 3. **Сборка Docker-контейнера в мок-режиме:**
@@ -235,6 +239,30 @@ ls -la backup/
    docker run -it --rm -p 3000:3000 gotogrow:mock
    ```
 
+### Решение проблем с Edge Runtime
+
+В мок-режиме могут возникать проблемы с Edge Runtime и библиотеками Clerk, особенно при сборке Docker-образа. Для их решения:
+
+1. **Используйте патчинг библиотек Clerk:**
+   ```bash
+   # Запуск патчинга модулей Clerk для мок-режима
+   node scripts/prepare-mock-build.js
+   ```
+
+2. **Если возникает ошибка с атрибутами DOMException:**
+   - Убедитесь, что используете Dockerfile.mock, который включает патчинг проблемных модулей
+   - Проверьте, что переменная `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` установлена в значение `mock_key_not_for_validation`
+
+3. **Если возникают ошибки с Edge Runtime:**
+   - В файле next.config.js для мок-режима уже отключены Server Components и Edge Runtime
+   - При необходимости можно усилить изоляцию, добавив в next.config.js:
+   ```javascript
+   experimental: {
+     runtime: 'nodejs',
+     serverComponents: false,
+   }
+   ```
+
 ### CI/CD с мок-режимом
 
 При настройке CI/CD пайплайнов для тестирования без реальных ключей API:
@@ -243,14 +271,14 @@ ls -la backup/
    ```yaml
    env:
      NEXT_PUBLIC_CLERK_MOCK_MODE: 'true'
-     NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: 'placeholder_key_for_mock_mode'
+     NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: 'mock_key_not_for_validation'
    ```
 
-2. **Для выполнения тестов:**
+2. **Для выполнения тестов используйте патчинг:**
    ```yaml
    - name: Build and test
      run: |
-       npm run build:mock
+       npm run build:mock-patched
        npm test
    ```
 

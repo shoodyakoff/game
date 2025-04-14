@@ -28,10 +28,16 @@ COPY . .
 # Настройка переменных среды для сборки
 ENV NODE_ENV=production
 ENV NEXT_PUBLIC_CLERK_MOCK_MODE=true
-ENV NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY="placeholder_key_for_mock_mode"
+# Используем заведомо невалидный ключ для того, чтобы компонент понимал, что нужно использовать мок
+ENV NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=mock_key_not_for_validation
+ENV CLERK_SECRET_KEY=mock_secret_key_not_used
 
-# Сборка приложения с использованием скрипта для мок-режима
-RUN npm run build:mock
+# Создаем временные заглушки для @clerk/nextjs, чтобы избежать ошибок в Edge Runtime
+RUN mkdir -p /app/node_modules/@clerk/nextjs/dist/cjs/server/ && \
+    echo 'module.exports = { redirect: () => null };' > /app/node_modules/@clerk/nextjs/dist/cjs/server/redirect.js
+
+# Сборка приложения с использованием скрипта для мок-режима с патчингом модулей
+RUN NODE_OPTIONS="--max-old-space-size=4096" npm run build:mock-patched
 
 # Подготовка к выполнению (production образа)
 FROM base AS runner
@@ -40,7 +46,7 @@ WORKDIR /app
 # Настройка для production
 ENV NODE_ENV=production
 ENV NEXT_PUBLIC_CLERK_MOCK_MODE=true
-ENV NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY="placeholder_key_for_mock_mode"
+ENV NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=mock_key_not_for_validation
 
 # Создание пользователя nextjs
 RUN addgroup --system --gid 1001 nodejs

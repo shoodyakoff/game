@@ -25,6 +25,15 @@ const nextConfig = {
     },
     // Отключаем SSR и SSG для всех страниц
     pageExtensions: ['client.jsx', 'client.js', 'client.tsx', 'client.ts', 'jsx', 'js', 'tsx', 'ts'],
+    // Полностью отключаем Edge Runtime
+    experimental: {
+      runtime: 'nodejs',
+      serverComponents: false,
+    },
+    // Отключаем предварительный рендеринг
+    images: {
+      unoptimized: true,
+    },
   } : {}),
   images: {
     domains: ['localhost', 'via.placeholder.com', 'images.clerk.dev'],
