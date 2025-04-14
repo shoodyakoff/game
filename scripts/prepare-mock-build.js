@@ -9,10 +9,17 @@ const patches = require('../src/components/auth/patches');
 
 // Пути к файлам, которые нужно пропатчить
 const files = [
+  // CJS модули
   {
     path: 'node_modules/@clerk/nextjs/dist/cjs/server/redirect.js',
     content: 'module.exports = { redirect: ' + patches.redirect.toString() + ' };'
   },
+  // ESM модули
+  {
+    path: 'node_modules/@clerk/nextjs/dist/esm/server/redirect.js',
+    content: 'export function redirect() { return null; }'
+  },
+  // Shared модули CJS
   {
     path: 'node_modules/@clerk/shared/dist/keys.js',
     patches: [
@@ -40,6 +47,25 @@ const files = [
         }`
       }
     ]
+  },
+  // Модули с проблемными Node.js API в Edge Runtime
+  {
+    path: 'node_modules/@clerk/shared/dist/chunk-RSOCGYTF.mjs',
+    content: `export default {}; 
+export const MessageEvent = { prototype: {} };`
+  },
+  // Основной ESM модуль ClerkProvider
+  {
+    path: 'node_modules/@clerk/nextjs/dist/esm/index.js',
+    content: `
+// Мок-версия Clerk для избежания ошибок при сборке
+export const ClerkProvider = ({children}) => children;
+export const useUser = () => ({ isLoaded: true, isSignedIn: false, user: null });
+export const useClerk = () => ({ signOut: () => {} });
+export const SignIn = () => null;
+export const SignUp = () => null;
+export const UserButton = () => null;
+`
   }
 ];
 
@@ -93,5 +119,29 @@ files.forEach(file => {
     console.error(`Ошибка при патчинге файла ${file.path}:`, error);
   }
 });
+
+// Также создаем файл .env.local с настройками мок-режима
+const envContent = `
+# Настройки Clerk для мок-режима
+NEXT_PUBLIC_CLERK_MOCK_MODE=true
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=mock_key_not_for_validation
+CLERK_SECRET_KEY=mock_secret_key_not_used
+
+# Настройки URL
+NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in
+NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up
+NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL=/dashboard
+NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL=/character/select
+
+# Отключение проверки
+NEXT_PUBLIC_CLERK_NO_VERIFICATION=true
+`;
+
+try {
+  fs.writeFileSync('.env.local', envContent, 'utf-8');
+  console.log('Файл .env.local успешно создан с настройками мок-режима.');
+} catch (error) {
+  console.error('Ошибка при создании файла .env.local:', error);
+}
 
 console.log('Патчинг модулей Clerk для мок-режима завершен.'); 

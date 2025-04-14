@@ -32,12 +32,37 @@ ENV NEXT_PUBLIC_CLERK_MOCK_MODE=true
 ENV NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=mock_key_not_for_validation
 ENV CLERK_SECRET_KEY=mock_secret_key_not_used
 
-# Создаем временные заглушки для @clerk/nextjs, чтобы избежать ошибок в Edge Runtime
+# Создаем временные заглушки для проблемных модулей Clerk
+# 1. Заглушки для CJS модулей
 RUN mkdir -p /app/node_modules/@clerk/nextjs/dist/cjs/server/ && \
     echo 'module.exports = { redirect: () => null };' > /app/node_modules/@clerk/nextjs/dist/cjs/server/redirect.js
 
-# Сборка приложения с использованием скрипта для мок-режима с патчингом модулей
-RUN NODE_OPTIONS="--max-old-space-size=4096" npm run build:mock-patched
+# 2. Заглушки для ESM модулей  
+RUN mkdir -p /app/node_modules/@clerk/nextjs/dist/esm/server/ && \
+    echo 'export function redirect() { return null; }' > /app/node_modules/@clerk/nextjs/dist/esm/server/redirect.js
+
+# 3. Заглушки для shared модулей
+RUN echo 'module.exports = { isomorphicAtob: () => "mock", isPublishableKey: () => true, parsePublishableKey: () => ({ clerkJSUrl: "https://clerk.browser.accounts.dev", clerkJSVariant: "clerk-js", clerkJSVersion: "0.0.0-mock", frontendApi: "clerk.mock.accounts.dev", proxyUrl: "", domain: "clerk.accounts.dev", isSatellite: false, instanceType: "production" }) };' > /app/node_modules/@clerk/shared/dist/keys.js
+
+# 4. Заглушка для проблемного chunk-модуля ESM
+RUN mkdir -p /app/node_modules/@clerk/shared/dist/ && \
+    echo 'export default {}; export const MessageEvent = { prototype: {} };' > /app/node_modules/@clerk/shared/dist/chunk-RSOCGYTF.mjs
+
+# 5. Создаем .env файл с настройками мок-режима
+RUN echo "NEXT_PUBLIC_CLERK_MOCK_MODE=true\nNEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=mock_key_not_for_validation\nCLERK_SECRET_KEY=mock_secret_key_not_used" > .env.local
+
+# Запускаем скрипт патчинга для дополнительной обработки
+RUN node scripts/prepare-mock-build.js
+
+# Отключаем Clerk полностью во время сборки - сохраняем оригинал и подменяем пустышкой
+RUN mv /app/node_modules/@clerk/nextjs/dist/esm/index.js /app/node_modules/@clerk/nextjs/dist/esm/index.js.bak && \
+    echo 'export const ClerkProvider = ({children}) => children; export const useUser = () => ({ isLoaded: true, isSignedIn: false, user: null }); export const useClerk = () => ({ signOut: () => {} });' > /app/node_modules/@clerk/nextjs/dist/esm/index.js
+
+# Сборка приложения с использованием скрипта для обычной сборки (patching уже выполнен)
+RUN NODE_OPTIONS="--max-old-space-size=4096" npm run build:docker
+
+# Возвращаем оригинал Clerk если был заменен
+RUN if [ -f /app/node_modules/@clerk/nextjs/dist/esm/index.js.bak ]; then mv /app/node_modules/@clerk/nextjs/dist/esm/index.js.bak /app/node_modules/@clerk/nextjs/dist/esm/index.js; fi
 
 # Подготовка к выполнению (production образа)
 FROM base AS runner
