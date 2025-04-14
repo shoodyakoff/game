@@ -1,0 +1,30 @@
+# Базовый образ для Node.js
+FROM node:18.19.1-alpine
+
+# Установка необходимых пакетов
+RUN apk add --no-cache libc6-compat curl
+
+# Рабочая директория
+WORKDIR /app
+
+# Копирование package.json и установка зависимостей
+COPY package.json package-lock.json ./
+RUN npm ci
+
+# Копирование исходного кода
+COPY . .
+
+# Переменные окружения для мок-режима
+ENV NODE_ENV=production
+ENV NEXT_PUBLIC_CLERK_MOCK_MODE=true
+ENV NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=mock_key_not_for_validation
+ENV NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in
+ENV NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up
+ENV NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL=/dashboard
+ENV NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL=/character/select
+
+# Порт приложения
+EXPOSE 3000
+
+# Запуск в режиме разработки для упрощения
+CMD ["npm", "run", "dev"] 
