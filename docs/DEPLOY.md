@@ -200,3 +200,7 @@ ls -la backup/
    ```bash
    docker system prune -a
    ``` 
+
+
+
+   Привет андрей
