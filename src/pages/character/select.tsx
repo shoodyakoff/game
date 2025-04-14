@@ -4,10 +4,10 @@ import { useRouter } from 'next/router';
 import { motion } from 'framer-motion';
 import { useUser } from '@clerk/nextjs';
 import { CharacterSelect } from '../../components/dashboard/CharacterSelect';
+import withMockMode, { WithAuthProps } from '../../components/auth/withMockMode';
 
-const CharacterSelectPage: NextPage = () => {
+const CharacterSelectPage: NextPage<WithAuthProps> = ({ user, isSignedIn, isLoaded }) => {
   const router = useRouter();
-  const { user, isSignedIn, isLoaded } = useUser();
   const { redirectTo } = router.query;
 
   // Если пользователь еще не загружен или не аутентифицирован,
@@ -44,4 +44,4 @@ const CharacterSelectPage: NextPage = () => {
   );
 };
 
-export default CharacterSelectPage; 
+export default withMockMode(CharacterSelectPage); 

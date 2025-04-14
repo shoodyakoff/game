@@ -8,9 +8,9 @@ import { useUser, useClerk } from '@clerk/nextjs';
 
 import ProtectedRoute from '../../components/auth/ProtectedRoute';
 import { RootState } from '../../store';
+import withMockMode, { WithAuthProps } from '../../components/auth/withMockMode';
 
-const Games: NextPage = () => {
-  const { user, isLoaded, isSignedIn } = useUser();
+const Games: NextPage<WithAuthProps> = ({ user, isSignedIn, isLoaded }) => {
   const { signOut } = useClerk();
   const [isClient, setIsClient] = useState(false);
   
@@ -347,4 +347,4 @@ const Games: NextPage = () => {
   );
 };
 
-export default Games; 
+export default withMockMode(Games); 

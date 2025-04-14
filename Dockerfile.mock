@@ -1,0 +1,61 @@
+# Базовый образ для рабочей среды и сборки
+FROM node:18.19.1-alpine AS base
+
+# Установка зависимостей для полноценной работы Node.js
+RUN apk add --no-cache libc6-compat curl
+
+# Этап установки зависимостей
+FROM base AS deps
+WORKDIR /app
+
+# Копирование файлов package.json и package-lock.json
+COPY package.json package-lock.json ./
+
+# Установка зависимостей
+RUN npm ci && \
+    npm cache clean --force
+
+# Этап сборки приложения
+FROM base AS builder
+WORKDIR /app
+
+# Копирование установленных зависимостей
+COPY --from=deps /app/node_modules ./node_modules
+
+# Копирование исходного кода
+COPY . .
+
+# Настройка переменных среды для сборки
+ENV NODE_ENV=production
+ENV NEXT_PUBLIC_CLERK_MOCK_MODE=true
+ENV NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY="placeholder_key_for_mock_mode"
+
+# Сборка приложения с использованием скрипта для мок-режима
+RUN npm run build:mock
+
+# Подготовка к выполнению (production образа)
+FROM base AS runner
+WORKDIR /app
+
+# Настройка для production
+ENV NODE_ENV=production
+ENV NEXT_PUBLIC_CLERK_MOCK_MODE=true
+ENV NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY="placeholder_key_for_mock_mode"
+
+# Создание пользователя nextjs
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 nextjs
+USER nextjs
+
+# Копирование необходимых файлов из этапа сборки
+COPY --from=builder --chown=nextjs:nodejs /app/public ./public
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+
+# Настройка порта и команды запуска
+EXPOSE 3000
+ENV PORT=3000
+ENV HOSTNAME="0.0.0.0"
+
+# Запуск сервера
+CMD ["node", "server.js"] 

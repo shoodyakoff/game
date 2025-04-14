@@ -4,10 +4,11 @@ import Link from 'next/link';
 import type { NextPage } from 'next';
 import Head from 'next/head';
 import { motion } from 'framer-motion';
+import withMockMode, { WithAuthProps } from '../components/auth/withMockMode';
 
-const Home: NextPage = () => {
+// Страница с пропсами аутентификации от HOC
+const Home: NextPage<WithAuthProps> = ({ isLoaded, isSignedIn, user }) => {
   const [isClient, setIsClient] = useState(false);
-  const { isLoaded, isSignedIn, user } = useUser();
   
   useEffect(() => {
     setIsClient(true);
@@ -352,4 +353,5 @@ const Home: NextPage = () => {
   );
 };
 
-export default Home; 
+// Оборачиваем компонент в HOC для поддержки мок-режима
+export default withMockMode(Home); 

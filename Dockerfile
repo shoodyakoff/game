@@ -47,6 +47,9 @@ RUN NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_valid_looking_clerk_key_for_build_
     NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up \
     NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL=/dashboard \
     NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL=/character/select \
+    NEXT_PUBLIC_CLERK_MOCK_MODE=true \
+    NEXT_PUBLIC_CLERK_NO_VERIFICATION=true \
+    NODE_ENV=production \
     NODE_OPTIONS="--max-old-space-size=4096" \
     npm run build:docker
 

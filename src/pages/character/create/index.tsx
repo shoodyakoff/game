@@ -7,12 +7,12 @@ import axios from 'axios';
 import type { RootState } from '../../../store';
 import { useAppDispatch } from '../../../store/hooks';
 import { useUser } from '@clerk/nextjs';
+import withMockMode, { WithAuthProps } from '../../../components/auth/withMockMode';
 
 // Заглушка для страницы создания персонажа
-export default function CreateCharacter() {
+function CreateCharacter({ user, isSignedIn, isLoaded }: WithAuthProps) {
   const router = useRouter();
   const dispatch = useAppDispatch();
-  const { user, isSignedIn, isLoaded } = useUser();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -119,4 +119,6 @@ export default function CreateCharacter() {
       </div>
     </>
   );
-} 
+}
+
+export default withMockMode(CreateCharacter); 

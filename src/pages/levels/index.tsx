@@ -14,6 +14,7 @@ import LogoutButton from '../../components/LogoutButton';
 import Sidebar from '../../components/layout/Sidebar';
 import Header from '../../components/layout/Header';
 import { resetLevel1 } from '../../components/levels/shared/utils/levelResetUtils';
+import withMockMode from '../../components/auth/withMockMode';
 
 const Levels: NextPage = () => {
   const router = useRouter();
@@ -386,4 +387,4 @@ const Levels: NextPage = () => {
   );
 };
 
-export default Levels; 
+export default withMockMode(Levels); 

@@ -11,10 +11,10 @@ import DashboardInitializer from '../../components/dashboard/DashboardInitialize
 import Header from '../../components/layout/Header';
 import Sidebar from '../../components/layout/Sidebar';
 import ProtectedRoute from '../../components/auth/ProtectedRoute';
+import withMockMode, { WithAuthProps } from '../../components/auth/withMockMode';
 
-const Dashboard: NextPage = () => {
+const Dashboard: NextPage<WithAuthProps> = ({ user, isLoaded, isSignedIn }) => {
   const router = useRouter();
-  const { user, isLoaded, isSignedIn } = useUser();
   const selectedCharacter = useSelector(selectSelectedCharacter);
   const [loading, setLoading] = useState(true);
 
@@ -125,4 +125,4 @@ const Dashboard: NextPage = () => {
   );
 };
 
-export default Dashboard;
+export default withMockMode(Dashboard);

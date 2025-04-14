@@ -13,6 +13,7 @@ import ProtectedRoute from '../../components/auth/ProtectedRoute';
 import { RootState } from '../../store';
 import { selectSelectedCharacter } from '../../store/slices/characterSlice';
 import LogoutButton from '../../components/LogoutButton';
+import withMockMode, { WithAuthProps } from '../../components/auth/withMockMode';
 
 // Расширяем тип для дополнительных полей пользователя
 interface ExtendedUser {
@@ -20,8 +21,7 @@ interface ExtendedUser {
   bio?: string;
 }
 
-const Profile: NextPage = () => {
-  const { user, isLoaded, isSignedIn } = useUser();
+const Profile: NextPage<WithAuthProps> = ({ user, isSignedIn, isLoaded }) => {
   const selectedCharacter = useSelector(selectSelectedCharacter);
   
   const [isClient, setIsClient] = useState(false);
@@ -225,4 +225,4 @@ const Profile: NextPage = () => {
   );
 };
 
-export default Profile; 
+export default withMockMode(Profile); 
