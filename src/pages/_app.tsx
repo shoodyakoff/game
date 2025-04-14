@@ -1,8 +1,8 @@
 import '../styles/globals.css';
 import type { AppProps } from 'next/app';
 import { ClerkProvider, useUser } from '@clerk/nextjs';
-import { Provider } from 'react-redux';
 import { useEffect } from 'react';
+import { Provider } from 'react-redux';
 import store from '../store';
 import { initializeCharacter } from '../store/slices/characterSlice';
 import Head from 'next/head';

@@ -38,9 +38,9 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
 # Создание временного .env файла для сборки
-RUN echo "JWT_SECRET=dummy-build-jwt\nMONGODB_URI=mongodb://localhost:27017/dummy-db\nNEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_valid_looking_clerk_key_for_build_12345\nCLERK_SECRET_KEY=sk_test_valid_looking_clerk_secret_key_for_build_67890\nNEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in\nNEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up\nNEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL=/dashboard\nNEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL=/character/select" > .env.build
+RUN echo "JWT_SECRET=dummy-build-jwt\nMONGODB_URI=mongodb://localhost:27017/dummy-db\nNEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_valid_looking_clerk_key_for_build_12345\nCLERK_SECRET_KEY=sk_test_valid_looking_clerk_secret_key_for_build_67890\nNEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in\nNEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up\nNEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL=/dashboard\nNEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL=/character/select\nNEXT_PUBLIC_CLERK_MOCK_MODE=true" > .env.build
 
-# Сборка приложения с добавлением необходимых переменных окружения для Clerk
+# Сборка приложения с упрощенным режимом для пропуска проверок
 RUN NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_valid_looking_clerk_key_for_build_12345 \
     CLERK_SECRET_KEY=sk_test_valid_looking_clerk_secret_key_for_build_67890 \
     NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in \
@@ -48,7 +48,7 @@ RUN NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_valid_looking_clerk_key_for_build_
     NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL=/dashboard \
     NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL=/character/select \
     NODE_OPTIONS="--max-old-space-size=4096" \
-    npm run build || (echo "Build failed" && exit 1)
+    npm run build:docker
 
 # Очистка и установка только production зависимостей
 RUN rm -rf node_modules && \

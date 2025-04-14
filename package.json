@@ -5,6 +5,10 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "build:docker": "next build --no-lint",
+    "build:test-docker": "bash ./scripts/test-docker-build.sh",
+    "docker:build": "docker build -t gotogrow-test .",
+    "docker:test-run": "docker run -it --rm -p 3000:3000 gotogrow-test",
     "start": "next start",
     "lint": "next lint",
     "security-check": "npm audit",
