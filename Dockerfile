@@ -124,7 +124,12 @@ RUN mkdir -p /app/node_modules/@clerk && \
 RUN echo "Skipping build step, using development mode instead" && \
     mkdir -p .next/standalone && \
     mkdir -p .next/static && \
-    touch .next/build-manifest.json
+    touch .next/build-manifest.json && \
+    npm install -g next && \
+    echo '#!/bin/bash' > /app/start-app.sh && \
+    echo 'export PATH="/app/node_modules/.bin:$PATH"' >> /app/start-app.sh && \
+    echo 'cd /app && NODE_ENV=development NEXT_PUBLIC_CLERK_MOCK_MODE=true next dev -p 3000' >> /app/start-app.sh && \
+    chmod +x /app/start-app.sh
 
 # Очистка и установка только production зависимостей
 RUN rm -rf .git && \
@@ -133,7 +138,9 @@ RUN rm -rf .git && \
     rm -rf tests && \
     rm -rf __tests__ && \
     rm -rf coverage && \
-    rm -f .env.build
+    rm -f .env.build && \
+    npm link next && \
+    echo 'export PATH="/app/node_modules/.bin:$PATH"' >> /etc/profile
 
 # Финальный этап
 FROM base AS runner
@@ -185,13 +192,29 @@ RUN echo '#!/bin/sh' > /usr/local/bin/healthcheck.sh && \
     cat /usr/local/bin/healthcheck.sh
 
 # Переключение на непривилегированного пользователя
-USER nextjs
+# USER nextjs
 
 # Открытие порта
 EXPOSE 3000
 
+# Создаем запускной скрипт
+RUN echo '#!/bin/sh' > /app/start.sh && \
+    echo 'echo "Диагностика окружения:"' >> /app/start.sh && \
+    echo 'echo "Node version: $(node -v)"' >> /app/start.sh && \
+    echo 'echo "NPM version: $(npm -v)"' >> /app/start.sh && \
+    echo 'export PATH="/app/node_modules/.bin:/app/node_modules/next/dist/bin:$PATH"' >> /app/start.sh && \
+    echo 'echo "Проверка наличия next:"' >> /app/start.sh && \
+    echo 'which next || echo "next не найден в PATH"' >> /app/start.sh && \
+    echo 'echo "Содержимое директории node_modules/.bin:"' >> /app/start.sh && \
+    echo 'ls -la /app/node_modules/.bin || echo "Директория .bin не найдена"' >> /app/start.sh && \
+    echo 'echo "Содержимое директории node_modules/next/dist/bin:"' >> /app/start.sh && \
+    echo 'ls -la /app/node_modules/next/dist/bin || echo "Директория bin не найдена"' >> /app/start.sh && \
+    echo 'echo "Пробуем запустить next напрямую:"' >> /app/start.sh && \
+    echo 'node /app/node_modules/next/dist/bin/next dev' >> /app/start.sh && \
+    chmod +x /app/start.sh
+
 # Запуск приложения
-CMD ["npm", "run", "dev"]
+CMD ["/app/start-app.sh"]
 
 # Проверка здоровья с мягкими параметрами
 HEALTHCHECK --interval=60s --timeout=30s --start-period=60s --retries=5 \
