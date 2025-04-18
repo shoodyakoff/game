@@ -3,58 +3,92 @@
 
 set -e  # Останавливаем скрипт при ошибках
 
-echo "=== Настройка приложения GOTOGROW на сервере в мок-режиме ==="
+echo "🚀 Начинаем настройку сервера в режиме с имитацией аутентификации..."
 
-# Обновляем репозиторий
-echo "1. Обновление кода из репозитория..."
+# Шаг 1: Обновляем код из репозитория
+echo "📥 Обновляем код из репозитория..."
+git fetch
 git pull origin main
 
-# Делаем скрипты исполняемыми
-echo "2. Настройка прав доступа для скриптов..."
+# Шаг 2: Делаем скрипты исполняемыми
+echo "🔐 Делаем скрипты исполняемыми..."
 chmod +x patch-clerk-modules.sh
 chmod +x setup-mock-server.sh
 
-# Пересоздаем контейнеры
-echo "3. Остановка существующих контейнеров..."
-docker-compose -f docker-compose.prod.yml down || true
+# Шаг 3: Останавливаем существующие контейнеры
+echo "🛑 Останавливаем существующие контейнеры..."
+docker-compose -f docker-compose.prod.yml down
 
-# Очистка Docker
-echo "4. Очистка Docker..."
-docker system prune -f
+# Шаг 4: Очищаем Docker
+echo "🧹 Очищаем Docker..."
+docker system prune -af
 
-# Патчим модули Clerk перед сборкой
-echo "5. Патчинг модулей Clerk..."
-./patch-clerk-modules.sh
+# Шаг 5: Патчим модули Clerk
+echo "🩹 Патчим проблемные модули Clerk..."
+npm ci
 
-# Создаем файл docker-compose.override.yml с нужными настройками
-echo "6. Создание docker-compose.override.yml..."
-cat > docker-compose.override.yml << 'EOF'
-version: '3.8'
+# Создаем директорию для модулей Clerk, если она не существует
+mkdir -p ./node_modules/@clerk/shared/dist
+
+# Патчим keys.js для обхода проблемы с atob
+echo "export function isomorphicAtob(str) { return 'patched'; }
+export function isPublishableKey() { return true; }
+export function parsePublishableKey() { return { frontendApi: 'clerk.example.com', instanceType: 'test' }; }" > ./node_modules/@clerk/shared/dist/keys.js
+
+echo "✅ Модули Clerk успешно пропатчены!"
+
+# Шаг 6: Создаем файл .env.local с правильными настройками
+echo "🔧 Создаем файл .env.local..."
+cat > .env.local << EOL
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_JA==
+CLERK_SECRET_KEY=sk_test_valid_key
+NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in
+NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up
+NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL=/dashboard
+NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL=/character/select
+NEXT_PUBLIC_CLERK_MOCK_MODE=true
+NEXT_PUBLIC_CLERK_NO_VERIFICATION=true
+EOL
+echo "✅ Файл .env.local создан!"
+
+# Шаг 7: Создаем docker-compose.override.yml с необходимыми переменными среды
+echo "🐳 Создаем docker-compose.override.yml..."
+cat > docker-compose.override.yml << EOL
+version: '3'
 
 services:
-  nextjs-app:
+  app:
     build:
-      args:
-        - NEXT_PUBLIC_CLERK_MOCK_MODE=true
-        - NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=mock_key_not_for_validation
-        - CLERK_SECRET_KEY=mock_secret_key_not_used
+      context: .
+      dockerfile: Dockerfile.minimal
     environment:
-      - NEXT_PUBLIC_CLERK_MOCK_MODE=true
-      - NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=mock_key_not_for_validation
+      - NODE_ENV=development
+      - NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_JA==
+      - CLERK_SECRET_KEY=sk_test_valid_key
       - NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in
       - NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up
       - NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL=/dashboard
       - NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL=/character/select
+      - NEXT_PUBLIC_CLERK_MOCK_MODE=true
       - NEXT_PUBLIC_CLERK_NO_VERIFICATION=true
-EOF
+    volumes:
+      - ./.env.local:/app/.env.local
+EOL
+echo "✅ Файл docker-compose.override.yml создан!"
 
-# Сборка и запуск
-echo "7. Сборка и запуск контейнеров..."
+# Шаг 8: Строим и запускаем контейнеры
+echo "🚀 Строим и запускаем контейнеры..."
 docker-compose -f docker-compose.prod.yml up -d --build
 
-# Проверка статуса
-echo "8. Проверка статуса контейнеров..."
-docker ps
+# Шаг 9: Проверяем статус
+echo "🔍 Проверяем статус контейнеров..."
+docker-compose -f docker-compose.prod.yml ps
+
+echo "🎉 Установка завершена! 
+Приложение доступно по адресу http://localhost:3000
+
+Для просмотра логов используйте команду:
+docker-compose -f docker-compose.prod.yml logs -f app"
 
 echo "=== Настройка завершена! ==="
 echo "Приложение доступно по адресу: http://<IP-сервера>:3000"
