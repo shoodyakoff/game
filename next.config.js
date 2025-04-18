@@ -22,14 +22,10 @@ const nextConfig = {
     experimental: {
       serverActions: false,
       serverComponents: false,
+      runtime: 'nodejs',
     },
     // Отключаем SSR и SSG для всех страниц
     pageExtensions: ['client.jsx', 'client.js', 'client.tsx', 'client.ts', 'jsx', 'js', 'tsx', 'ts'],
-    // Полностью отключаем Edge Runtime
-    experimental: {
-      runtime: 'nodejs',
-      serverComponents: false,
-    },
     // Отключаем предварительный рендеринг
     images: {
       unoptimized: true,
@@ -38,9 +34,6 @@ const nextConfig = {
   images: {
     domains: ['localhost', 'via.placeholder.com', 'images.clerk.dev'],
     unoptimized: true, // Отключаем оптимизацию для простоты работы в Docker
-  },
-  experimental: {
-    // Другие экспериментальные опции, если нужны
   },
   // Настройки для API роутов
   async rewrites() {
@@ -80,6 +73,31 @@ const nextConfig = {
         },
       });
     }
+    
+    // Фикс для Edge Runtime и проблемных модулей
+    if (isServer) {
+      // Игнорируем проблемные модули
+      config.externals = [...(config.externals || []), 'scheduler'];
+    }
+    
+    // Игнорируем ошибки импорта для модулей Clerk
+    if (process.env.NEXT_PUBLIC_CLERK_MOCK_MODE === 'true') {
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        '@clerk/shared': false,
+        '@clerk/nextjs': false,
+        '@clerk/clerk-react': false,
+      };
+      
+      // Исключаем проверку ESM модулей Clerk
+      config.module.rules.push({
+        test: /node_modules\/@clerk\/shared\/dist\/.*\.mjs$/,
+        resolve: {
+          fullySpecified: false, // отключаем строгую проверку ESM для этих модулей
+        },
+      });
+    }
+    
     return config;
   },
 }

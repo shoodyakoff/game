@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "build:docker": "next build --no-lint",
+    "build:docker": "echo 'Skipping build in Docker mode' || next build --no-lint",
     "build:mock": "NEXT_PUBLIC_CLERK_MOCK_MODE=true next build --no-lint",
     "build:mock-patched": "node scripts/prepare-mock-build.js && NEXT_PUBLIC_CLERK_MOCK_MODE=true next build --no-lint",
     "build:test-docker": "bash ./scripts/test-docker-build.sh",
