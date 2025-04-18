@@ -12,23 +12,24 @@ services:
         NEXT_PUBLIC_CLERK_SIGN_UP_URL: "/sign-up"
         NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL: "/dashboard"
         NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL: "/character/select"
-        NEXT_PUBLIC_CLERK_MOCK_MODE: "true"
+        NEXT_PUBLIC_CLERK_MOCK_MODE: "false"
         NEXT_PUBLIC_CLERK_NO_VERIFICATION: "true"
     restart: always
     ports:
       - "3000:3000"
     environment:
       - NODE_ENV=production
-      - NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}
-      - CLERK_SECRET_KEY=${CLERK_SECRET_KEY}
+      - NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY:-pk_test_dHJ1ZS1nb2xkZmlzaC04MS5jbGVyay5hY2NvdW50cy5kZXYk}
+      - CLERK_SECRET_KEY=${CLERK_SECRET_KEY:-sk_test_7Wb9VikhkBTuO4O6YUjVVCmxQB5wtAvX8V79kubHMi}
       - NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in
       - NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up
       - NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL=/dashboard
       - NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL=/character/select
-      - NEXT_PUBLIC_CLERK_MOCK_MODE=true
+      - NEXT_PUBLIC_CLERK_MOCK_MODE=false
       - NEXT_PUBLIC_CLERK_NO_VERIFICATION=true
       - PORT=3000
       - HOSTNAME=0.0.0.0
+      - MONGODB_URI=mongodb+srv://shoodyakoff:Eta15DTZ0lORouTf@clusterpmgame.kyw9b.mongodb.net/game-portal?retryWrites=true&w=majority&appName=ClusterPmGame
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000"]
       interval: 30s
