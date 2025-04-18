@@ -31,8 +31,21 @@ jobs:
           
           # Деплой приложения с использованием скрипта обновления
           ssh $SSH_USER@$SERVER_IP << 'ENDSSH'
-            cd ~/game
-            git pull
-            chmod +x update-server.sh
-            ./update-server.sh
+            cd /home/deploy/game
+            if [ ! -d ".git" ]; then
+              echo "Клонируем репозиторий..."
+              git clone https://github.com/shoodyakoff/game.git .
+            else
+              echo "Обновляем репозиторий..."
+              git pull origin main
+            fi
+            
+            # Проверка наличия файла и его исполнение
+            if [ -f "update-server.sh" ]; then
+              chmod +x update-server.sh
+              ./update-server.sh
+            else
+              echo "ОШИБКА: Файл update-server.sh не найден!"
+              ls -la
+            fi
           ENDSSH 
