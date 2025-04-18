@@ -1,248 +1,72 @@
 # Базовый образ
-FROM node:18.19.1-alpine AS base
+FROM node:18.19.1-alpine
 
-# Установка базовых зависимостей
-RUN apk add --no-cache libc6-compat curl
+# Установка зависимостей
+RUN apk add --no-cache libc6-compat curl bash
 
-# Этап установки зависимостей
-FROM base AS deps
+# Рабочая директория
 WORKDIR /app
+
+# Копирование файлов проекта
 COPY package.json package-lock.json ./
-RUN npm ci && \
-    npm cache clean --force
+RUN npm ci
 
-# Этап сборки
-FROM base AS builder
-WORKDIR /app
-
-# Публичные переменные окружения для сборки
-ARG NEXT_PUBLIC_APP_NAME=GOTOGROW
-ARG NEXT_PUBLIC_APP_VERSION=1.0.0
-ARG NEXT_PUBLIC_API_URL
-ARG NODE_ENV=production
-ARG NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
-ARG CLERK_SECRET_KEY
-ARG NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in
-ARG NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up
-ARG NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL=/dashboard
-ARG NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL=/character/select
-ARG NEXT_PUBLIC_CLERK_MOCK_MODE=true
-ARG NEXT_PUBLIC_CLERK_NO_VERIFICATION=true
-
-# Установка переменных окружения для сборки
-ENV NEXT_PUBLIC_APP_NAME=${NEXT_PUBLIC_APP_NAME}
-ENV NEXT_PUBLIC_APP_VERSION=${NEXT_PUBLIC_APP_VERSION}
-ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-http://localhost:3000}
-ENV NODE_ENV=${NODE_ENV}
-ENV NEXT_TELEMETRY_DISABLED=1
-ENV SKIP_MONGODB_CHECK=true
-ENV NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}
-ENV CLERK_SECRET_KEY=${CLERK_SECRET_KEY}
-ENV NEXT_PUBLIC_CLERK_SIGN_IN_URL=${NEXT_PUBLIC_CLERK_SIGN_IN_URL}
-ENV NEXT_PUBLIC_CLERK_SIGN_UP_URL=${NEXT_PUBLIC_CLERK_SIGN_UP_URL}
-ENV NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL=${NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL}
-ENV NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL=${NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL}
-ENV NEXT_PUBLIC_CLERK_MOCK_MODE=${NEXT_PUBLIC_CLERK_MOCK_MODE}
-ENV NEXT_PUBLIC_CLERK_NO_VERIFICATION=${NEXT_PUBLIC_CLERK_NO_VERIFICATION}
-
-# Копирование зависимостей и исходного кода
-COPY --from=deps /app/node_modules ./node_modules
+# Копирование исходного кода
 COPY . .
-
-# Создание временного .env файла для сборки с валидными ключами
-RUN echo "JWT_SECRET=dummy-build-jwt" > .env.build && \
-    echo "MONGODB_URI=mongodb://localhost:27017/dummy-db" >> .env.build && \
-    echo "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}" >> .env.build && \
-    echo "CLERK_SECRET_KEY=${CLERK_SECRET_KEY}" >> .env.build && \
-    echo "NEXT_PUBLIC_CLERK_SIGN_IN_URL=${NEXT_PUBLIC_CLERK_SIGN_IN_URL}" >> .env.build && \
-    echo "NEXT_PUBLIC_CLERK_SIGN_UP_URL=${NEXT_PUBLIC_CLERK_SIGN_UP_URL}" >> .env.build && \
-    echo "NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL=${NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL}" >> .env.build && \
-    echo "NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL=${NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL}" >> .env.build && \
-    echo "NEXT_PUBLIC_CLERK_MOCK_MODE=${NEXT_PUBLIC_CLERK_MOCK_MODE}" >> .env.build && \
-    echo "NEXT_PUBLIC_CLERK_NO_VERIFICATION=${NEXT_PUBLIC_CLERK_NO_VERIFICATION}" >> .env.build
-
-# Патчинг проблемных модулей Clerk перед сборкой
-RUN mkdir -p /app/node_modules/@clerk && \
-    echo 'console.log("Using Clerk mock implementation");' > /app/node_modules/@clerk/clerk-react.js && \
-    echo 'module.exports = {' >> /app/node_modules/@clerk/clerk-react.js && \
-    echo '  ClerkProvider: (props) => props.children,' >> /app/node_modules/@clerk/clerk-react.js && \
-    echo '  SignedIn: (props) => props.children,' >> /app/node_modules/@clerk/clerk-react.js && \
-    echo '  SignedOut: () => null,' >> /app/node_modules/@clerk/clerk-react.js && \
-    echo '  SignIn: () => null,' >> /app/node_modules/@clerk/clerk-react.js && \
-    echo '  SignUp: () => null,' >> /app/node_modules/@clerk/clerk-react.js && \
-    echo '  UserButton: () => null,' >> /app/node_modules/@clerk/clerk-react.js && \
-    echo '  useUser: () => ({ user: { id: "mock-user", firstName: "Test", lastName: "User", emailAddresses: [{ emailAddress: "test@example.com" }] } }),' >> /app/node_modules/@clerk/clerk-react.js && \
-    echo '  useAuth: () => ({ userId: "mock-user", isLoaded: true, isSignedIn: true }),' >> /app/node_modules/@clerk/clerk-react.js && \
-    echo '  useSession: () => ({ session: { id: "mock-session" } }),' >> /app/node_modules/@clerk/clerk-react.js && \
-    echo '  useClerk: () => ({ signOut: () => Promise.resolve() })' >> /app/node_modules/@clerk/clerk-react.js && \
-    echo '};' >> /app/node_modules/@clerk/clerk-react.js && \
-    echo 'console.log("Using Clerk mock implementation for nextjs");' > /app/node_modules/@clerk/nextjs.js && \
-    echo 'const mockUser = { id: "mock-user", firstName: "Test", lastName: "User", emailAddresses: [{ emailAddress: "test@example.com" }] };' >> /app/node_modules/@clerk/nextjs.js && \
-    echo 'module.exports = {' >> /app/node_modules/@clerk/nextjs.js && \
-    echo '  ClerkProvider: (props) => props.children,' >> /app/node_modules/@clerk/nextjs.js && \
-    echo '  authMiddleware: () => (req) => req,' >> /app/node_modules/@clerk/nextjs.js && \
-    echo '  clerkClient: { users: { getUser: () => Promise.resolve(mockUser) } },' >> /app/node_modules/@clerk/nextjs.js && \
-    echo '  getAuth: () => ({ userId: "mock-user", sessionId: "mock-session" }),' >> /app/node_modules/@clerk/nextjs.js && \
-    echo '  buildClerkProps: () => ({ __clerk_ssr_state: { user: mockUser } }),' >> /app/node_modules/@clerk/nextjs.js && \
-    echo '  redirectToSignIn: () => null,' >> /app/node_modules/@clerk/nextjs.js && \
-    echo '  SignedIn: (props) => props.children,' >> /app/node_modules/@clerk/nextjs.js && \
-    echo '  SignedOut: () => null,' >> /app/node_modules/@clerk/nextjs.js && \
-    echo '  auth: () => ({ userId: "mock-user", sessionId: "mock-session" }),' >> /app/node_modules/@clerk/nextjs.js && \
-    echo '  currentUser: () => mockUser,' >> /app/node_modules/@clerk/nextjs.js && \
-    echo '  useUser: () => ({ user: mockUser, isLoaded: true, isSignedIn: true }),' >> /app/node_modules/@clerk/nextjs.js && \
-    echo '  useAuth: () => ({ userId: "mock-user", isLoaded: true, isSignedIn: true })' >> /app/node_modules/@clerk/nextjs.js && \
-    echo '};' >> /app/node_modules/@clerk/nextjs.js && \
-    # Создаем директорию для мокнутых модулей
-    mkdir -p /app/node_modules/@clerk/shared/dist && \
-    echo 'console.log("Using patched implementation for Clerk shared");' > /app/node_modules/@clerk/shared/dist/index.js && \
-    echo 'module.exports = {' >> /app/node_modules/@clerk/shared/dist/index.js && \
-    echo '  isomorphicAtob: () => "mock-atob",' >> /app/node_modules/@clerk/shared/dist/index.js && \
-    echo '  isPublishableKey: () => true,' >> /app/node_modules/@clerk/shared/dist/index.js && \
-    echo '  parsePublishableKey: () => ({ frontendApi: "clerk.example.com", instanceType: "test" }),' >> /app/node_modules/@clerk/shared/dist/index.js && \
-    echo '  createClerkClientObject: () => ({ mockKey: true, version: "mocked" }),' >> /app/node_modules/@clerk/shared/dist/index.js && \
-    echo '  getClerkApiUrl: () => "https://api.clerk.dev",' >> /app/node_modules/@clerk/shared/dist/index.js && \
-    echo '  isHttpOrHttps: () => true,' >> /app/node_modules/@clerk/shared/dist/index.js && \
-    echo '  LocalStorageBroadcastChannel: class { constructor() {} postMessage() {} addEventListener() {} removeEventListener() {} close() {} }' >> /app/node_modules/@clerk/shared/dist/index.js && \
-    echo '};' >> /app/node_modules/@clerk/shared/dist/index.js && \
-    # Создаем ESM версию
-    echo '// Пропатченный ESM модуль' > /app/node_modules/@clerk/shared/dist/index.mjs && \
-    echo 'export function isomorphicAtob() { return "mock-atob"; }' >> /app/node_modules/@clerk/shared/dist/index.mjs && \
-    echo 'export function isPublishableKey() { return true; }' >> /app/node_modules/@clerk/shared/dist/index.mjs && \
-    echo 'export function parsePublishableKey() { return { frontendApi: "clerk.example.com", instanceType: "test" }; }' >> /app/node_modules/@clerk/shared/dist/index.mjs && \
-    echo 'export const createClerkClientObject = () => ({ mockKey: true, version: "mocked" });' >> /app/node_modules/@clerk/shared/dist/index.mjs && \
-    echo 'export const getClerkApiUrl = () => "https://api.clerk.dev";' >> /app/node_modules/@clerk/shared/dist/index.mjs && \
-    echo 'export const isHttpOrHttps = () => true;' >> /app/node_modules/@clerk/shared/dist/index.mjs && \
-    echo 'export class LocalStorageBroadcastChannel { constructor() {} postMessage() {} addEventListener() {} removeEventListener() {} close() {} }' >> /app/node_modules/@clerk/shared/dist/index.mjs && \
-    # Создаем патч для chunk-модуля
-    echo '// Пропатченный модуль' > /app/node_modules/@clerk/shared/dist/chunk-RSOCGYTF.mjs && \
-    echo 'export const createClerkClientObject = () => ({ mockKey: true, version: "mocked" });' >> /app/node_modules/@clerk/shared/dist/chunk-RSOCGYTF.mjs && \
-    echo 'export const getClerkApiUrl = () => "https://api.clerk.dev";' >> /app/node_modules/@clerk/shared/dist/chunk-RSOCGYTF.mjs && \
-    echo 'export const isHttpOrHttps = () => true;' >> /app/node_modules/@clerk/shared/dist/chunk-RSOCGYTF.mjs && \
-    echo 'export class LocalStorageBroadcastChannel { constructor() {} postMessage() {} addEventListener() {} removeEventListener() {} close() {} }' >> /app/node_modules/@clerk/shared/dist/chunk-RSOCGYTF.mjs
-
-# Сборка приложения с упрощенным режимом для пропуска проверок
-RUN echo "Skipping build step, using development mode instead" && \
-    mkdir -p .next/standalone && \
-    mkdir -p .next/static && \
-    touch .next/build-manifest.json && \
-    npm install -g next && \
-    echo '#!/bin/bash' > /app/start-app.sh && \
-    echo 'export PATH="/app/node_modules/.bin:$PATH"' >> /app/start-app.sh && \
-    echo 'cd /app && NODE_ENV=development NEXT_PUBLIC_CLERK_MOCK_MODE=true next dev -p 3000' >> /app/start-app.sh && \
-    chmod +x /app/start-app.sh
-
-# Очистка и установка только production зависимостей
-RUN rm -rf .git && \
-    rm -rf .github && \
-    rm -rf test && \
-    rm -rf tests && \
-    rm -rf __tests__ && \
-    rm -rf coverage && \
-    rm -f .env.build && \
-    npm link next && \
-    echo 'export PATH="/app/node_modules/.bin:$PATH"' >> /etc/profile
-
-# Финальный этап
-FROM base AS runner
-WORKDIR /app
-
-# Установка необходимых утилит
-RUN apk add --no-cache curl netcat-openbsd bash
-
-# Создание непривилегированного пользователя
-RUN addgroup --system --gid 1001 nodejs && \
-    adduser --system --uid 1001 nextjs
-
-# Создание необходимых директорий и установка прав
-RUN mkdir -p .next && \
-    chown -R nextjs:nodejs .
-
-# Установка зависимостей для server.js
-RUN npm install --no-save next react react-dom
-
-# Базовые переменные окружения
-ENV NODE_ENV=production
-ENV NEXT_TELEMETRY_DISABLED=1
-ENV PORT=3000
-ENV SKIP_MONGODB_CHECK=true
-ENV NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}
-ENV CLERK_SECRET_KEY=${CLERK_SECRET_KEY}
-ENV NEXT_PUBLIC_CLERK_SIGN_IN_URL=${NEXT_PUBLIC_CLERK_SIGN_IN_URL}
-ENV NEXT_PUBLIC_CLERK_SIGN_UP_URL=${NEXT_PUBLIC_CLERK_SIGN_UP_URL}
-ENV NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL=${NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL}
-ENV NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL=${NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL}
-ENV NEXT_PUBLIC_CLERK_MOCK_MODE=${NEXT_PUBLIC_CLERK_MOCK_MODE}
-ENV NEXT_PUBLIC_CLERK_NO_VERIFICATION=${NEXT_PUBLIC_CLERK_NO_VERIFICATION}
-
-# Копирование файлов из builder
-COPY --from=builder --chown=nextjs:nodejs /app/public ./public
-COPY --from=builder --chown=nextjs:nodejs /app/.next ./.next
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules ./node_modules
-COPY --from=builder --chown=nextjs:nodejs /app/package.json ./package.json
-COPY --from=builder --chown=nextjs:nodejs /app/next.config.js ./next.config.js
-COPY --from=builder --chown=nextjs:nodejs /app/start-app.sh ./start-app.sh
 
 # Создаем server.js для запуска Next.js
 RUN echo 'const { createServer } = require("http");' > /app/server.js && \
     echo 'const { parse } = require("url");' >> /app/server.js && \
     echo 'const next = require("next");' >> /app/server.js && \
     echo 'const dev = process.env.NODE_ENV !== "production";' >> /app/server.js && \
-    echo 'const app = next({ dev });' >> /app/server.js && \
+    echo 'const hostname = "0.0.0.0";' >> /app/server.js && \
+    echo 'const port = 3000;' >> /app/server.js && \
+    echo 'console.log(`Запуск Next.js в ${dev ? "dev" : "production"} режиме`);' >> /app/server.js && \
+    echo 'const app = next({ dev, hostname, port });' >> /app/server.js && \
     echo 'const handle = app.getRequestHandler();' >> /app/server.js && \
+    echo 'console.log("Подготовка приложения...");' >> /app/server.js && \
     echo 'app.prepare().then(() => {' >> /app/server.js && \
+    echo '  console.log("Приложение готово, запускаем сервер...");' >> /app/server.js && \
     echo '  createServer((req, res) => {' >> /app/server.js && \
-    echo '    handle(req, res, parse(req.url, true));' >> /app/server.js && \
-    echo '  }).listen(3000, (err) => {' >> /app/server.js && \
+    echo '    try {' >> /app/server.js && \
+    echo '      handle(req, res, parse(req.url, true));' >> /app/server.js && \
+    echo '    } catch (err) {' >> /app/server.js && \
+    echo '      console.error("Ошибка при обработке запроса:", err);' >> /app/server.js && \
+    echo '      res.statusCode = 500;' >> /app/server.js && \
+    echo '      res.end("Внутренняя ошибка сервера");' >> /app/server.js && \
+    echo '    }' >> /app/server.js && \
+    echo '  }).listen(port, hostname, (err) => {' >> /app/server.js && \
     echo '    if (err) throw err;' >> /app/server.js && \
-    echo '    console.log("Сервер Next.js запущен на http://localhost:3000");' >> /app/server.js && \
+    echo '    console.log(`Сервер Next.js запущен на http://${hostname}:${port}`);' >> /app/server.js && \
     echo '  });' >> /app/server.js && \
+    echo '}).catch(err => {' >> /app/server.js && \
+    echo '  console.error("Ошибка при подготовке приложения:", err);' >> /app/server.js && \
+    echo '  process.exit(1);' >> /app/server.js && \
     echo '});' >> /app/server.js
 
-# Убедимся, что скрипты запуска имеют права на выполнение
-RUN chmod +x /app/start-app.sh
-
-# Создание скрипта проверки здоровья
-USER root
-RUN echo '#!/bin/sh' > /usr/local/bin/healthcheck.sh && \
-    echo 'if pgrep -x "node" > /dev/null; then' >> /usr/local/bin/healthcheck.sh && \
-    echo '    echo "Node process is running"' >> /usr/local/bin/healthcheck.sh && \
-    echo '    exit 0' >> /usr/local/bin/healthcheck.sh && \
-    echo 'else' >> /usr/local/bin/healthcheck.sh && \
-    echo '    echo "Node process is not running"' >> /usr/local/bin/healthcheck.sh && \
-    echo '    exit 1' >> /usr/local/bin/healthcheck.sh && \
-    echo 'fi' >> /usr/local/bin/healthcheck.sh && \
-    chmod +x /usr/local/bin/healthcheck.sh && \
-    cat /usr/local/bin/healthcheck.sh
-
-# Переключение на непривилегированного пользователя
-# USER nextjs
-
-# Открытие порта
-EXPOSE 3000
-
 # Создаем запускной скрипт
-RUN echo '#!/bin/sh' > /app/start.sh && \
-    echo 'echo "Диагностика окружения:"' >> /app/start.sh && \
-    echo 'echo "Node version: $(node -v)"' >> /app/start.sh && \
-    echo 'echo "NPM version: $(npm -v)"' >> /app/start.sh && \
-    echo 'echo "Содержимое директории app:"' >> /app/start.sh && \
-    echo 'ls -la /app' >> /app/start.sh && \
-    echo 'echo "Проверка server.js:"' >> /app/start.sh && \
-    echo 'if [ -f "/app/server.js" ]; then' >> /app/start.sh && \
-    echo '  echo "Файл server.js существует, запускаем node:"' >> /app/start.sh && \
-    echo '  cd /app && NODE_ENV=development NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_dHJ1ZS1nb2xkZmlzaC04MS5jbGVyay5hY2NvdW50cy5kZXYk CLERK_SECRET_KEY=sk_test_7Wb9VikhkBTuO4O6YUjVVCmxQB5wtAvX8V79kubHMi NEXT_PUBLIC_CLERK_MOCK_MODE=false node server.js' >> /app/start.sh && \
-    echo 'else' >> /app/start.sh && \
-    echo '  echo "Ошибка: файл server.js не найден!"' >> /app/start.sh && \
-    echo '  exit 1' >> /app/start.sh && \
-    echo 'fi' >> /app/start.sh && \
+RUN echo '#!/bin/bash' > /app/start.sh && \
+    echo 'echo "=== Запуск сервера Next.js ===="' >> /app/start.sh && \
+    echo 'echo "Node $(node -v), NPM $(npm -v)"' >> /app/start.sh && \
+    echo 'echo "Директория: $(pwd)"' >> /app/start.sh && \
+    echo 'export NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY:-pk_test_dHJ1ZS1nb2xkZmlzaC04MS5jbGVyay5hY2NvdW50cy5kZXYk}' >> /app/start.sh && \
+    echo 'export CLERK_SECRET_KEY=${CLERK_SECRET_KEY:-sk_test_7Wb9VikhkBTuO4O6YUjVVCmxQB5wtAvX8V79kubHMi}' >> /app/start.sh && \
+    echo 'export NODE_ENV=${NODE_ENV:-development}' >> /app/start.sh && \
+    echo 'export NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in' >> /app/start.sh && \
+    echo 'export NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up' >> /app/start.sh && \
+    echo 'export NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL=/dashboard' >> /app/start.sh && \
+    echo 'export NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL=/character/select' >> /app/start.sh && \
+    echo 'export NEXT_PUBLIC_CLERK_MOCK_MODE=${NEXT_PUBLIC_CLERK_MOCK_MODE:-false}' >> /app/start.sh && \
+    echo 'export NEXT_PUBLIC_CLERK_NO_VERIFICATION=${NEXT_PUBLIC_CLERK_NO_VERIFICATION:-true}' >> /app/start.sh && \
+    echo 'echo "=== Переменные окружения ===="' >> /app/start.sh && \
+    echo 'echo "NODE_ENV: $NODE_ENV"' >> /app/start.sh && \
+    echo 'echo "NEXT_PUBLIC_CLERK_MOCK_MODE: $NEXT_PUBLIC_CLERK_MOCK_MODE"' >> /app/start.sh && \
+    echo 'echo "=== Запуск приложения ===="' >> /app/start.sh && \
+    echo 'node server.js' >> /app/start.sh && \
     chmod +x /app/start.sh
 
-# Запуск приложения
-CMD ["/app/start.sh"]
+# Экспортируем порт
+EXPOSE 3000
 
-# Проверка здоровья с мягкими параметрами
-HEALTHCHECK --interval=60s --timeout=30s --start-period=60s --retries=5 \
-    CMD pgrep -x "node" > /dev/null || exit 1
-
-# Метка приложения
-LABEL app_id={app_id} 
+# Запускаем приложение
+CMD ["/app/start.sh"] 
