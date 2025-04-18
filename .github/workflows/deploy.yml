@@ -16,24 +16,21 @@ jobs:
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
       
+      - name: Add known hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H 176.124.219.223 >> ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+      
       - name: Deploy to server
         env:
           NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
           CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
           MONGODB_URI: ${{ secrets.MONGODB_URI }}
-          SERVER_HOST: ${{ secrets.SSH_HOST }}
-          SERVER_USER: ${{ secrets.SSH_USER }}
         run: |
-          # Создаем директорию .ssh с нужными правами
-          mkdir -p ~/.ssh
-          chmod 700 ~/.ssh
-          
-          # Добавляем хост в известные хосты
-          ssh-keyscan $SERVER_HOST >> ~/.ssh/known_hosts
-          
           # Копируем исходники на сервер
-          ssh $SERVER_USER@$SERVER_HOST "mkdir -p ~/deploy"
-          scp -r ./* $SERVER_USER@$SERVER_HOST:~/deploy/
+          ssh deploy@176.124.219.223 "mkdir -p ~/deploy"
+          scp -r ./* deploy@176.124.219.223:~/deploy/
           
           # Запускаем деплой на сервере
-          ssh $SERVER_USER@$SERVER_HOST "cd ~/deploy && export NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY='$NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY' && export CLERK_SECRET_KEY='$CLERK_SECRET_KEY' && export MONGODB_URI='$MONGODB_URI' && ./server-setup.sh" 
+          ssh deploy@176.124.219.223 "cd ~/deploy && export NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY='$NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY' && export CLERK_SECRET_KEY='$CLERK_SECRET_KEY' && export MONGODB_URI='$MONGODB_URI' && chmod +x server-setup.sh && ./server-setup.sh" 
