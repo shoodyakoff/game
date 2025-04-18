@@ -57,7 +57,7 @@ RUN echo '#!/bin/bash\necho "🚀 Запуск патча для Clerk..."\n./fi
 FROM node:18.19.1-alpine AS runner
 
 # Устанавливаем зависимости
-RUN apk add --no-cache libc6-compat curl bash sed
+RUN apk add --no-cache libc6-compat curl bash sed findutils
 
 WORKDIR /app
 
@@ -65,6 +65,18 @@ WORKDIR /app
 COPY --from=base /app/.next/standalone/ ./
 COPY --from=base /app/.next/static ./.next/static
 COPY --from=base /app/public ./public
+
+# Явно копируем скрипты запуска
+COPY --from=base /app/.next/standalone/start.sh ./
+COPY --from=base /app/.next/standalone/fix-clerk-edge.sh ./
+
+# Проверяем наличие файлов
+RUN ls -la && \
+    echo "Проверка наличия start.sh:" && \
+    find / -name "start.sh" -type f 2>/dev/null && \
+    echo "Проверка прав на запуск:" && \
+    chmod +x ./start.sh ./fix-clerk-edge.sh && \
+    ls -la ./start.sh
 
 # Экспонируем порт
 EXPOSE 3000
