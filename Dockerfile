@@ -33,15 +33,9 @@ ENV NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL=/character/select
 ENV NEXT_PUBLIC_CLERK_MOCK_MODE=false
 ENV CLERK_NO_VERIFICATION=true
 
-# Разрешаем конфликты между pages и app роутерами
-RUN if [ -f pages/api/health.ts ] && [ -f app/api/health/route.ts ]; then \
-      echo "Разрешение конфликта для /api/health..." && \
-      mv app/api/health/route.ts app/api/health/route.ts.bak || true; \
-    fi && \
-    if [ -f pages/api/healthcheck.ts ] && [ -f app/api/healthcheck/route.ts ]; then \
-      echo "Разрешение конфликта для /api/healthcheck..." && \
-      mv app/api/healthcheck/route.ts app/api/healthcheck/route.ts.bak || true; \
-    fi
+# Принудительно удаляем конфликтующие файлы
+RUN rm -f pages/api/health.ts pages/api/healthcheck.ts app/api/health/route.ts app/api/healthcheck/route.ts || true
+RUN rm -f src/pages/api/health.ts src/pages/api/healthcheck.ts src/app/api/health/route.ts src/app/api/healthcheck/route.ts || true
 
 # Собираем приложение
 RUN npm run build
