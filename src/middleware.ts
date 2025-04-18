@@ -43,4 +43,7 @@ export default useClerk
 // Конфигурация для middleware
 export const config = {
   matcher: ["/((?!.+\\.[\\w]+$|_next).*)", "/", "/(api|trpc)(.*)"],
+  
+  // Отключаем Edge Runtime и используем Node.js
+  runtime: "nodejs"
 }; 
