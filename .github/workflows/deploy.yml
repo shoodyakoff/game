@@ -29,11 +29,10 @@ jobs:
           # Проверка подключения
           ssh $SSH_USER@$SERVER_IP "echo 'Connection successful'"
           
-          # Деплой приложения
+          # Деплой приложения с использованием скрипта обновления
           ssh $SSH_USER@$SERVER_IP << 'ENDSSH'
-            cd ~/game/src
-            git pull
             cd ~/game
-            docker compose down
-            docker compose up --build -d
+            git pull
+            chmod +x update-server.sh
+            ./update-server.sh
           ENDSSH 
