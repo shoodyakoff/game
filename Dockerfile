@@ -23,6 +23,7 @@ COPY --from=deps /app/node_modules ./node_modules
 # Копирование только необходимых файлов исходного кода
 COPY src/ ./src/
 COPY public/ ./public/
+COPY types/ ./types/
 COPY next.config.js package.json package-lock.json ./
 
 # Установка переменных для сборки

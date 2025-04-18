@@ -45,6 +45,7 @@ jobs:
           # Копируем только необходимые файлы для сборки
           cp -r src/ deploy_files/
           cp -r public/ deploy_files/
+          cp -r types/ deploy_files/
           cp package.json package-lock.json next.config.js fix-clerk-edge.sh Dockerfile docker-compose.prod.yml server-setup.sh deploy_files/
           
           # Копируем только необходимые файлы на сервер
