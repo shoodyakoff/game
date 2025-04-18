@@ -13,7 +13,8 @@ out
 .env.local
 .env.development.local
 .env.test.local
-.env.production.local
+# Разрешаем .env.production для продакшена
+# .env.production.local
 
 # Системные файлы
 .DS_Store
@@ -29,6 +30,7 @@ README.md
 docker-compose*.yml
 *.log
 deploy*
-Dockerfile*
+# Разрешаем Dockerfile для продакшена
+# Dockerfile*
 .editorconfig
 *.md 

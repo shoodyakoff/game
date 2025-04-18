@@ -33,6 +33,16 @@ ENV NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL=/character/select
 ENV NEXT_PUBLIC_CLERK_MOCK_MODE=false
 ENV CLERK_NO_VERIFICATION=true
 
+# Разрешаем конфликты между pages и app роутерами
+RUN if [ -f pages/api/health.ts ] && [ -f app/api/health/route.ts ]; then \
+      echo "Разрешение конфликта для /api/health..." && \
+      mv app/api/health/route.ts app/api/health/route.ts.bak || true; \
+    fi && \
+    if [ -f pages/api/healthcheck.ts ] && [ -f app/api/healthcheck/route.ts ]; then \
+      echo "Разрешение конфликта для /api/healthcheck..." && \
+      mv app/api/healthcheck/route.ts app/api/healthcheck/route.ts.bak || true; \
+    fi
+
 # Собираем приложение
 RUN npm run build
 
@@ -57,7 +67,7 @@ RUN echo '#!/bin/bash\necho "🚀 Запуск патча для Clerk..."\n./fi
 FROM node:18.19.1-alpine AS runner
 
 # Устанавливаем зависимости
-RUN apk add --no-cache libc6-compat curl bash sed findutils
+RUN apk add --no-cache libc6-compat curl bash sed
 
 WORKDIR /app
 
@@ -85,5 +95,13 @@ EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
 
-# Запускаем приложение через скрипт
-CMD ["./start.sh"] 
+# Создаем скрипт запуска прямо в финальном образе для избежания проблем с форматом
+RUN echo '#!/bin/sh' > /app/entrypoint.sh && \
+    echo 'echo "🚀 Запуск Next.js приложения в production режиме..."' >> /app/entrypoint.sh && \
+    echo 'cd /app' >> /app/entrypoint.sh && \
+    echo 'exec node server.js' >> /app/entrypoint.sh && \
+    chmod +x /app/entrypoint.sh && \
+    cat /app/entrypoint.sh
+
+# Запускаем приложение через новый скрипт
+CMD ["/app/entrypoint.sh"] 
