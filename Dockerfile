@@ -26,10 +26,19 @@ ENV NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL=/character/select
 ENV NEXT_PUBLIC_CLERK_NO_VERIFICATION=true
 
 # Сборка без линтера
+ENV NEXT_DISABLE_ESLINT=1
+ENV ESLINT_SKIP_PRETTIER=1
+ENV NODE_OPTIONS="--max-old-space-size=4096"
 RUN npm run build --no-lint || next build --no-lint
+
+# Устанавливаем next глобально, чтобы команда была доступна
+RUN npm install -g next
+
+# Проверяем наличие .next и node_modules
+RUN ls -la && ls -la .next || echo ".next не найден"
 
 # Экспортируем порт
 EXPOSE 3000
 
 # Запуск
-CMD ["npm", "start"] 
+CMD ["npx", "next", "start", "-p", "3000", "-H", "0.0.0.0"] 
