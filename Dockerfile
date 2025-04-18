@@ -157,6 +157,9 @@ RUN addgroup --system --gid 1001 nodejs && \
 RUN mkdir -p .next && \
     chown -R nextjs:nodejs .
 
+# Установка зависимостей для server.js
+RUN npm install --no-save next react react-dom
+
 # Базовые переменные окружения
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
@@ -178,6 +181,22 @@ COPY --from=builder --chown=nextjs:nodejs /app/node_modules ./node_modules
 COPY --from=builder --chown=nextjs:nodejs /app/package.json ./package.json
 COPY --from=builder --chown=nextjs:nodejs /app/next.config.js ./next.config.js
 COPY --from=builder --chown=nextjs:nodejs /app/start-app.sh ./start-app.sh
+
+# Создаем server.js для запуска Next.js
+RUN echo 'const { createServer } = require("http");' > /app/server.js && \
+    echo 'const { parse } = require("url");' >> /app/server.js && \
+    echo 'const next = require("next");' >> /app/server.js && \
+    echo 'const dev = process.env.NODE_ENV !== "production";' >> /app/server.js && \
+    echo 'const app = next({ dev });' >> /app/server.js && \
+    echo 'const handle = app.getRequestHandler();' >> /app/server.js && \
+    echo 'app.prepare().then(() => {' >> /app/server.js && \
+    echo '  createServer((req, res) => {' >> /app/server.js && \
+    echo '    handle(req, res, parse(req.url, true));' >> /app/server.js && \
+    echo '  }).listen(3000, (err) => {' >> /app/server.js && \
+    echo '    if (err) throw err;' >> /app/server.js && \
+    echo '    console.log("Сервер Next.js запущен на http://localhost:3000");' >> /app/server.js && \
+    echo '  });' >> /app/server.js && \
+    echo '});' >> /app/server.js
 
 # Убедимся, что скрипты запуска имеют права на выполнение
 RUN chmod +x /app/start-app.sh
@@ -206,15 +225,16 @@ RUN echo '#!/bin/sh' > /app/start.sh && \
     echo 'echo "Диагностика окружения:"' >> /app/start.sh && \
     echo 'echo "Node version: $(node -v)"' >> /app/start.sh && \
     echo 'echo "NPM version: $(npm -v)"' >> /app/start.sh && \
-    echo 'export PATH="/app/node_modules/.bin:/app/node_modules/next/dist/bin:$PATH"' >> /app/start.sh && \
-    echo 'echo "Проверка наличия next:"' >> /app/start.sh && \
-    echo 'which next || echo "next не найден в PATH"' >> /app/start.sh && \
-    echo 'echo "Содержимое директории node_modules/.bin:"' >> /app/start.sh && \
-    echo 'ls -la /app/node_modules/.bin || echo "Директория .bin не найдена"' >> /app/start.sh && \
-    echo 'echo "Содержимое директории node_modules/next/dist/bin:"' >> /app/start.sh && \
-    echo 'ls -la /app/node_modules/next/dist/bin || echo "Директория bin не найдена"' >> /app/start.sh && \
-    echo 'echo "Запускаем next в режиме разработки:"' >> /app/start.sh && \
-    echo 'cd /app && NODE_ENV=development NEXT_PUBLIC_CLERK_MOCK_MODE=false next dev -p 3000' >> /app/start.sh && \
+    echo 'echo "Содержимое директории app:"' >> /app/start.sh && \
+    echo 'ls -la /app' >> /app/start.sh && \
+    echo 'echo "Проверка server.js:"' >> /app/start.sh && \
+    echo 'if [ -f "/app/server.js" ]; then' >> /app/start.sh && \
+    echo '  echo "Файл server.js существует, запускаем node:"' >> /app/start.sh && \
+    echo '  cd /app && NODE_ENV=development NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_dHJ1ZS1nb2xkZmlzaC04MS5jbGVyay5hY2NvdW50cy5kZXYk CLERK_SECRET_KEY=sk_test_7Wb9VikhkBTuO4O6YUjVVCmxQB5wtAvX8V79kubHMi NEXT_PUBLIC_CLERK_MOCK_MODE=false node server.js' >> /app/start.sh && \
+    echo 'else' >> /app/start.sh && \
+    echo '  echo "Ошибка: файл server.js не найден!"' >> /app/start.sh && \
+    echo '  exit 1' >> /app/start.sh && \
+    echo 'fi' >> /app/start.sh && \
     chmod +x /app/start.sh
 
 # Запуск приложения
