@@ -53,12 +53,18 @@ RUN if [ -f fix-clerk-edge.sh ]; then \
 RUN echo '#!/bin/bash\necho "🚀 Запуск патча для Clerk..."\n./fix-clerk-edge.sh || echo "Предупреждение: Патч не применён, но продолжаем работу"\necho "🚀 Запуск приложения..."\nexec node server.js' > .next/standalone/start.sh && \
     chmod +x .next/standalone/start.sh
 
-# Перемещаем все файлы в корень для упрощения доступа
+# Создаем финальный образ с минимальными зависимостями
+FROM node:18.19.1-alpine AS runner
+
+# Устанавливаем зависимости
+RUN apk add --no-cache libc6-compat curl bash sed
+
 WORKDIR /app
-RUN mv .next/standalone/* . && \
-    rm -rf .next/standalone && \
-    mkdir -p .next/static && \
-    cp -R .next/static .next/
+
+# Копируем собранное приложение
+COPY --from=base /app/.next/standalone/ ./
+COPY --from=base /app/.next/static ./.next/static
+COPY --from=base /app/public ./public
 
 # Экспонируем порт
 EXPOSE 3000
