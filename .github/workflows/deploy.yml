@@ -48,33 +48,31 @@ jobs:
           # Проверка подключения
           ssh $SSH_USER@$SERVER_IP "echo 'Connection successful'"
           
-          # Копируем обновленные файлы конфигурации на сервер
-          scp Dockerfile docker-compose.prod.yml .env.production $SSH_USER@$SERVER_IP:/home/deploy/game/src/
+          # Создаём рабочий каталог, если он не существует
+          ssh $SSH_USER@$SERVER_IP "mkdir -p /home/deploy/game/deploy"
           
-          # Создаем файл с переменными окружения на сервере
-          ssh $SSH_USER@$SERVER_IP << 'ENDSSH'
-            # Обновляем репозиторий
-            cd /home/deploy/game/src
-            git pull origin main
-            
-            # Копируем файлы конфигурации в корневую директорию
-            cp Dockerfile docker-compose.prod.yml .env.production ../
-            cd ..
-            
-            # Создаем файл с переменными окружения
-            echo "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=\"$CLERK_PUBLISHABLE_KEY\"" > .env
-            echo "CLERK_SECRET_KEY=\"$CLERK_SECRET_KEY\"" >> .env
-            echo "NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in" >> .env
-            echo "NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up" >> .env
-            echo "NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL=/dashboard" >> .env
-            echo "NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL=/character/select" >> .env
-            echo "NEXT_PUBLIC_CLERK_MOCK_MODE=true" >> .env
-            echo "NEXT_PUBLIC_CLERK_NO_VERIFICATION=true" >> .env
-            
-            # Запускаем сборку и деплой
-            docker-compose -f docker-compose.prod.yml down
-            docker-compose -f docker-compose.prod.yml up -d --build
-            
-            # Проверяем статус контейнеров
-            docker ps
-          ENDSSH 
+          # Копируем весь репозиторий на сервер (включая .git для возможности обновления)
+          rsync -avz --exclude 'node_modules' --exclude '.next' . $SSH_USER@$SERVER_IP:/home/deploy/game/deploy/
+          
+          # Создаем .env файл на сервере с переменными среды
+          ssh $SSH_USER@$SERVER_IP "cat > /home/deploy/game/deploy/.env << EOF
+          NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=$CLERK_PUBLISHABLE_KEY
+          CLERK_SECRET_KEY=$CLERK_SECRET_KEY
+          NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in
+          NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up
+          NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL=/dashboard
+          NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL=/character/select
+          NEXT_PUBLIC_CLERK_MOCK_MODE=true
+          NEXT_PUBLIC_CLERK_NO_VERIFICATION=true
+          EOF"
+          
+          # Запускаем сборку и деплой
+          ssh $SSH_USER@$SERVER_IP "cd /home/deploy/game/deploy && \
+            echo 'Проверка файлов в директории:' && \
+            ls -la && \
+            echo 'Запуск Docker Compose...' && \
+            docker-compose -f docker-compose.prod.yml down && \
+            docker-compose -f docker-compose.prod.yml up -d --build"
+          
+          # Проверяем статус контейнеров
+          ssh $SSH_USER@$SERVER_IP "docker ps" 
