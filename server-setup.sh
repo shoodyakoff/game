@@ -2,6 +2,9 @@
 
 # Скрипт для настройки и запуска приложения на сервере в production режиме
 
+# Получаем внешний IP-адрес сервера
+SERVER_IP=$(curl -s ifconfig.me || hostname -I | awk '{print $1}')
+
 # Обновляем код из репозитория
 echo "Обновление кода из репозитория..."
 git pull origin main
@@ -37,5 +40,5 @@ docker compose -f docker-compose.prod.yml up -d
 echo "Проверяем статус контейнеров..."
 docker compose -f docker-compose.prod.yml ps
 
-echo "Настройка завершена. Приложение будет доступно по адресу http://localhost:3000"
+echo "Настройка завершена. Приложение будет доступно по адресу http://${SERVER_IP}:3000"
 echo "Для просмотра логов используйте команду: docker compose -f docker-compose.prod.yml logs -f nextjs-app" 
