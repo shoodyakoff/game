@@ -29,7 +29,7 @@ services:
       - NEXT_PUBLIC_CLERK_NO_VERIFICATION=true
       - PORT=3000
       - HOSTNAME=0.0.0.0
-      - MONGODB_URI=mongodb+srv://shoodyakoff:Eta15DTZ0lORouTf@clusterpmgame.kyw9b.mongodb.net/game-portal?retryWrites=true&w=majority&appName=ClusterPmGame
+      - MONGODB_URI=${MONGODB_URI}
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000"]
       interval: 30s
