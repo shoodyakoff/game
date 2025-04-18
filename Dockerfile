@@ -38,9 +38,16 @@ RUN npm run build
 
 # Настраиваем standalone режим
 RUN cp -R .next/static .next/standalone/.next/ && \
-    cp -R public .next/standalone/ && \
-    cp fix-clerk-edge.sh .next/standalone/ && \
-    chmod +x .next/standalone/fix-clerk-edge.sh
+    cp -R public .next/standalone/
+
+# Создаем необходимые скрипты
+RUN if [ -f fix-clerk-edge.sh ]; then \
+      cp fix-clerk-edge.sh .next/standalone/ && \
+      chmod +x .next/standalone/fix-clerk-edge.sh; \
+    else \
+      echo '#!/bin/bash' > .next/standalone/fix-clerk-edge.sh && \
+      chmod +x .next/standalone/fix-clerk-edge.sh; \
+    fi
 
 # Создаем скрипт запуска
 RUN echo '#!/bin/bash\necho "🚀 Запуск патча для Clerk..."\n./fix-clerk-edge.sh || echo "Предупреждение: Патч не применён, но продолжаем работу"\necho "🚀 Запуск приложения..."\nnode server.js' > .next/standalone/start.sh && \
