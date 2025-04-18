@@ -50,11 +50,15 @@ RUN if [ -f fix-clerk-edge.sh ]; then \
     fi
 
 # Создаем скрипт запуска
-RUN echo '#!/bin/bash\necho "🚀 Запуск патча для Clerk..."\n./fix-clerk-edge.sh || echo "Предупреждение: Патч не применён, но продолжаем работу"\necho "🚀 Запуск приложения..."\nnode server.js' > .next/standalone/start.sh && \
+RUN echo '#!/bin/bash\necho "🚀 Запуск патча для Clerk..."\n./fix-clerk-edge.sh || echo "Предупреждение: Патч не применён, но продолжаем работу"\necho "🚀 Запуск приложения..."\nexec node server.js' > .next/standalone/start.sh && \
     chmod +x .next/standalone/start.sh
 
-# Устанавливаем рабочую директорию
-WORKDIR /app/.next/standalone
+# Перемещаем все файлы в корень для упрощения доступа
+WORKDIR /app
+RUN mv .next/standalone/* . && \
+    rm -rf .next/standalone && \
+    mkdir -p .next/static && \
+    cp -R .next/static .next/
 
 # Экспонируем порт
 EXPOSE 3000
