@@ -147,7 +147,7 @@ FROM base AS runner
 WORKDIR /app
 
 # Установка необходимых утилит
-RUN apk add --no-cache curl netcat-openbsd
+RUN apk add --no-cache curl netcat-openbsd bash
 
 # Создание непривилегированного пользователя
 RUN addgroup --system --gid 1001 nodejs && \
@@ -178,6 +178,9 @@ COPY --from=builder --chown=nextjs:nodejs /app/node_modules ./node_modules
 COPY --from=builder --chown=nextjs:nodejs /app/package.json ./package.json
 COPY --from=builder --chown=nextjs:nodejs /app/next.config.js ./next.config.js
 COPY --from=builder --chown=nextjs:nodejs /app/start-app.sh ./start-app.sh
+
+# Убедимся, что скрипты запуска имеют права на выполнение
+RUN chmod +x /app/start-app.sh
 
 # Создание скрипта проверки здоровья
 USER root
@@ -210,12 +213,12 @@ RUN echo '#!/bin/sh' > /app/start.sh && \
     echo 'ls -la /app/node_modules/.bin || echo "Директория .bin не найдена"' >> /app/start.sh && \
     echo 'echo "Содержимое директории node_modules/next/dist/bin:"' >> /app/start.sh && \
     echo 'ls -la /app/node_modules/next/dist/bin || echo "Директория bin не найдена"' >> /app/start.sh && \
-    echo 'echo "Пробуем запустить next напрямую:"' >> /app/start.sh && \
-    echo 'node /app/node_modules/next/dist/bin/next dev' >> /app/start.sh && \
+    echo 'echo "Запускаем next в режиме разработки:"' >> /app/start.sh && \
+    echo 'cd /app && NODE_ENV=development NEXT_PUBLIC_CLERK_MOCK_MODE=false next dev -p 3000' >> /app/start.sh && \
     chmod +x /app/start.sh
 
 # Запуск приложения
-CMD ["/app/start-app.sh"]
+CMD ["/app/start.sh"]
 
 # Проверка здоровья с мягкими параметрами
 HEALTHCHECK --interval=60s --timeout=30s --start-period=60s --retries=5 \

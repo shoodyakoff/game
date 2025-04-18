@@ -18,7 +18,7 @@ echo "🔑 Назначение прав на выполнение скрипт�
 chmod +x *.sh
 
 echo "🛑 Остановка существующих контейнеров..."
-docker-compose -f docker-compose.prod.yml down || true
+docker-compose -f docker-compose.prod.yml down --remove-orphans || true
 
 echo "🧹 Очистка Docker..."
 docker system prune -f
@@ -30,7 +30,7 @@ version: '3.8'
 services:
   nextjs-app:
     environment:
-      - NODE_ENV=production
+      - NODE_ENV=development
       - NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_dHJ1ZS1nb2xkZmlzaC04MS5jbGVyay5hY2NvdW50cy5kZXYk
       - CLERK_SECRET_KEY=sk_test_7Wb9VikhkBTuO4O6YUjVVCmxQB5wtAvX8V79kubHMi
       - NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in
@@ -39,6 +39,20 @@ services:
       - NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL=/character/select
       - NEXT_PUBLIC_CLERK_MOCK_MODE=false
       - NEXT_PUBLIC_CLERK_NO_VERIFICATION=true
+EOL
+
+# Создаем .env файл с правильными переменными окружения
+echo "📝 Создание .env файла с реальными ключами Clerk..."
+cat > .env << EOL
+# Clerk Authentication
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_dHJ1ZS1nb2xkZmlzaC04MS5jbGVyay5hY2NvdW50cy5kZXYk
+CLERK_SECRET_KEY=sk_test_7Wb9VikhkBTuO4O6YUjVVCmxQB5wtAvX8V79kubHMi
+NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in
+NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up
+NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL=/dashboard
+NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL=/character/select
+NEXT_PUBLIC_CLERK_MOCK_MODE=false
+NEXT_PUBLIC_CLERK_NO_VERIFICATION=true
 EOL
 
 echo "🏗️ Сборка и запуск контейнеров..."
