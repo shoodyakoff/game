@@ -52,7 +52,7 @@ jobs:
           scp Dockerfile docker-compose.prod.yml .env.production $SSH_USER@$SERVER_IP:/home/deploy/game/src/
           
           # Создаем файл с переменными окружения на сервере
-          ssh $SSH_USER@$SERVER_IP << ENDSSH
+          ssh $SSH_USER@$SERVER_IP << 'ENDSSH'
             # Обновляем репозиторий
             cd /home/deploy/game/src
             git pull origin main
