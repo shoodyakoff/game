@@ -40,5 +40,5 @@ RUN ls -la && ls -la .next || echo ".next не найден"
 # Экспортируем порт
 EXPOSE 3000
 
-# Запуск
-CMD ["npx", "next", "start", "-p", "3000", "-H", "0.0.0.0"] 
+# Запуск standalone сервера для продакшена
+CMD ["node", ".next/standalone/server.js"] 
