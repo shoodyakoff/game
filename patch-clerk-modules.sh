@@ -1,86 +1,151 @@
 #!/bin/bash
-# Скрипт для ручного патчинга проблемных модулей Clerk
-# Запускать перед сборкой Docker на сервере
+# Скрипт для патчинга модулей Clerk для избежания ошибок в мок-режиме
 
-set -e  # Прерывать выполнение при первой ошибке
+set -e  # Останавливаем скрипт при ошибках
 
-echo "Начинаю патчинг модулей Clerk для мок-режима..."
+echo "🔧 Патчинг модулей Clerk..."
 
-# Определяем базовый путь для модулей
-BASE_PATH="node_modules/@clerk"
+# Создаем директории для патча, если они не существуют
+mkdir -p ./node_modules/@clerk/shared/dist
+mkdir -p ./node_modules/@clerk/nextjs/dist/cjs/server
+mkdir -p ./node_modules/@clerk/nextjs/dist/esm
 
-# 1. Патчим CJS/redirect.js
-REDIRECT_CJS_PATH="${BASE_PATH}/nextjs/dist/cjs/server/redirect.js"
-mkdir -p $(dirname "$REDIRECT_CJS_PATH")
-echo 'module.exports = { redirect: () => null };' > "$REDIRECT_CJS_PATH"
-echo "Пропатчен $REDIRECT_CJS_PATH"
+# Патчим keys.js для обхода ошибки atob
+echo "Патчинг keys.js..."
+cat > ./node_modules/@clerk/shared/dist/keys.js << 'EOL'
+// Пропатченный модуль keys.js
+// Избегаем ошибки с atob в мок-режиме
 
-# 2. Патчим ESM/redirect.js 
-REDIRECT_ESM_PATH="${BASE_PATH}/nextjs/dist/esm/server/redirect.js"
-mkdir -p $(dirname "$REDIRECT_ESM_PATH")
-echo 'export function redirect() { return null; }' > "$REDIRECT_ESM_PATH"
-echo "Пропатчен $REDIRECT_ESM_PATH"
+export function isomorphicAtob(str) { 
+  return "mock-atob-result"; 
+}
 
-# 3. Патчим keys.js
-KEYS_PATH="${BASE_PATH}/shared/dist/keys.js"
-mkdir -p $(dirname "$KEYS_PATH")
-cat > "$KEYS_PATH" << 'EOF'
-// Патч для keys.js
-module.exports = { 
-  isomorphicAtob: () => "mock", 
-  isPublishableKey: () => true, 
-  parsePublishableKey: () => ({ 
-    clerkJSUrl: "https://clerk.browser.accounts.dev", 
-    clerkJSVariant: "clerk-js", 
-    clerkJSVersion: "0.0.0-mock", 
-    frontendApi: "clerk.mock.accounts.dev", 
-    proxyUrl: "", 
-    domain: "clerk.accounts.dev", 
-    isSatellite: false, 
-    instanceType: "production" 
-  })
+export function isPublishableKey() { 
+  return true; 
+}
+
+export function parsePublishableKey() { 
+  return { 
+    frontendApi: "clerk.example.com", 
+    instanceType: "test" 
+  }; 
+}
+EOL
+
+# Патчим redirect.js для избежания проблем с валидацией ключа
+echo "Патчинг redirect.js (CJS версия)..."
+cat > ./node_modules/@clerk/nextjs/dist/cjs/server/redirect.js << 'EOL'
+// Пропатченный модуль redirect.js
+"use strict";
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.redirect = void 0;
+
+const redirect = (to) => {
+  console.log("Mock redirect to:", to);
+  // Просто заглушка, которая не будет пытаться валидировать ключи
+  return {};
 };
-EOF
-echo "Пропатчен $KEYS_PATH"
 
-# 4. Патчим chunk-RSOCGYTF.mjs
-CHUNK_PATH="${BASE_PATH}/shared/dist/chunk-RSOCGYTF.mjs"
-mkdir -p $(dirname "$CHUNK_PATH")
-echo 'export default {}; export const MessageEvent = { prototype: {} };' > "$CHUNK_PATH" 
-echo "Пропатчен $CHUNK_PATH"
+exports.redirect = redirect;
+EOL
 
-# 5. Патчим основной модуль Clerk для ESM
-INDEX_ESM_PATH="${BASE_PATH}/nextjs/dist/esm/index.js"
-if [ -f "$INDEX_ESM_PATH" ]; then
-  # Сохраняем копию
-  cp "$INDEX_ESM_PATH" "${INDEX_ESM_PATH}.bak"
-fi
+# Патчим chunk-RSOCGYTF.mjs
+echo "Патчинг chunk-RSOCGYTF.mjs..."
+mkdir -p ./node_modules/@clerk/shared/dist
+cat > ./node_modules/@clerk/shared/dist/chunk-RSOCGYTF.mjs << 'EOL'
+// Пропатченный модуль chunk-RSOCGYTF.mjs
+// Избегаем ошибки с MessageEvent в Edge Runtime
 
-mkdir -p $(dirname "$INDEX_ESM_PATH")
-cat > "$INDEX_ESM_PATH" << 'EOF'
-// Мок-версия Clerk для избежания ошибок при сборке
-export const ClerkProvider = ({children}) => children;
-export const useUser = () => ({ isLoaded: true, isSignedIn: false, user: null });
-export const useClerk = () => ({ signOut: () => {} });
-export const SignIn = () => null;
-export const SignUp = () => null;
-export const UserButton = () => null;
-EOF
-echo "Пропатчен $INDEX_ESM_PATH"
+// Это заглушка для проблемных модулей
+export const createClerkClientObject = () => ({
+  mockKey: true,
+  version: 'mocked'
+});
 
-# 6. Создаем локальные .env файлы
-cat > .env.local << 'EOF'
-# Настройки Clerk для мок-режима
-NEXT_PUBLIC_CLERK_MOCK_MODE=true
-NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=mock_key_not_for_validation
-CLERK_SECRET_KEY=mock_secret_key_not_used
-NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in
-NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up
-NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL=/dashboard
-NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL=/character/select
-NEXT_PUBLIC_CLERK_NO_VERIFICATION=true
-EOF
-echo "Создан .env.local с настройками мок-режима"
+export const getClerkApiUrl = () => 'https://api.clerk.dev';
 
-echo "Патчинг модулей Clerk завершен!"
-echo "Теперь можно запускать сборку Docker: docker-compose -f docker-compose.prod.yml up -d --build" 
+export const isHttpOrHttps = (url) => true;
+EOL
+
+# Создаем минимальную версию Clerk NextJS для мок-режима
+echo "Создание минимальной версии индексного файла Clerk..."
+cat > ./node_modules/@clerk/nextjs/dist/esm/index.js << 'EOL'
+// Минимальная мок-версия @clerk/nextjs
+// Предоставляет только необходимые компоненты и функции
+
+import React from 'react';
+
+// Мок компонентов
+export const ClerkProvider = ({children}) => React.createElement(React.Fragment, null, children);
+export const SignIn = () => React.createElement('div', null, 'Mock SignIn Component');
+export const SignUp = () => React.createElement('div', null, 'Mock SignUp Component');
+export const SignedIn = ({children}) => React.createElement(React.Fragment, null, children);
+export const SignedOut = () => React.createElement(React.Fragment, null, null);
+export const UserButton = () => React.createElement('button', null, 'User');
+
+// Мок хуков
+export const useUser = () => ({ 
+  isLoaded: true, 
+  isSignedIn: true, 
+  user: {
+    id: 'mock-user-id',
+    firstName: 'Mock',
+    lastName: 'User',
+    username: 'mockuser',
+    imageUrl: 'https://via.placeholder.com/150',
+    fullName: 'Mock User',
+  }
+});
+
+export const useAuth = () => ({
+  isLoaded: true,
+  isSignedIn: true,
+  signIn: () => Promise.resolve(),
+  signOut: () => Promise.resolve()
+});
+
+// Мок серверных функций
+export const getAuth = () => ({
+  userId: 'mock-user-id',
+  sessionId: 'mock-session-id',
+  getToken: () => Promise.resolve('mock-token'),
+});
+
+export const auth = () => ({
+  userId: 'mock-user-id',
+  sessionId: 'mock-session-id',
+  getToken: () => Promise.resolve('mock-token'),
+  protect: () => ({})
+});
+
+export const clerkClient = {
+  users: {
+    getUser: () => Promise.resolve({
+      id: 'mock-user-id',
+      firstName: 'Mock',
+      lastName: 'User',
+      username: 'mockuser',
+      imageUrl: 'https://via.placeholder.com/150',
+    }),
+    getUserList: () => Promise.resolve([{
+      id: 'mock-user-id',
+      firstName: 'Mock',
+      lastName: 'User',
+      username: 'mockuser', 
+      imageUrl: 'https://via.placeholder.com/150',
+    }])
+  }
+};
+
+// Также экспортируем для ESM версии
+export const redirectToSignIn = () => {};
+export const withClerkMiddleware = (middleware) => middleware;
+export const authMiddleware = (options) => (req) => req;
+EOL
+
+echo "Создание ESM версии индексного файла..."
+cp ./node_modules/@clerk/nextjs/dist/esm/index.js ./node_modules/@clerk/nextjs/dist/esm/index.mjs
+
+echo "✅ Патчинг модулей Clerk завершен успешно!" 
