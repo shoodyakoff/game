@@ -1,69 +1,60 @@
 # Базовый образ для сборки
-FROM node:18.19.1-alpine AS deps
+FROM node:18.19.1-alpine AS base
 
-# Рабочая директория
+# Устанавливаем зависимости
+RUN apk add --no-cache libc6-compat curl bash sed
+
 WORKDIR /app
 
-# Добавляем только зависимости для кэширования
-RUN apk add --no-cache libc6-compat
+# Задаем аргументы сборки
+ARG NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
+ARG CLERK_SECRET_KEY
+ARG MONGODB_URI
+ARG NODE_ENV=production
 
-# Копирование только package.json для кэширования зависимостей
+# Копируем файлы зависимостей
 COPY package.json package-lock.json ./
+
+# Устанавливаем зависимости
 RUN npm ci
 
-# Базовый образ для сборки
-FROM node:18.19.1-alpine AS builder
+# Копируем исходный код
+COPY . .
 
-# Рабочая директория
-WORKDIR /app
+# Устанавливаем переменные окружения для сборки
+ENV NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}
+ENV CLERK_SECRET_KEY=${CLERK_SECRET_KEY}
+ENV MONGODB_URI=${MONGODB_URI}
+ENV NODE_ENV=${NODE_ENV}
+ENV NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in
+ENV NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up
+ENV NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL=/dashboard
+ENV NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL=/character/select
+ENV NEXT_PUBLIC_CLERK_MOCK_MODE=false
+ENV CLERK_NO_VERIFICATION=true
 
-# Копирование зависимостей из предыдущего этапа
-COPY --from=deps /app/node_modules ./node_modules
-
-# Копирование только необходимых файлов исходного кода
-COPY src/ ./src/
-COPY public/ ./public/
-COPY types/ ./types/
-COPY next.config.js package.json package-lock.json ./
-
-# Установка переменных для сборки
-ENV NEXT_TELEMETRY_DISABLED=1 \
-    NODE_ENV=production \
-    NEXT_DISABLE_ESLINT=1 \
-    ESLINT_SKIP_PRETTIER=1
-
-# Сборка проекта
+# Собираем приложение
 RUN npm run build
 
-# Второй этап: минимальный контейнер для запуска приложения
-FROM node:18.19.1-alpine AS runner
+# Настраиваем standalone режим
+RUN cp -R .next/static .next/standalone/.next/ && \
+    cp -R public .next/standalone/ && \
+    cp fix-clerk-edge.sh .next/standalone/ && \
+    chmod +x .next/standalone/fix-clerk-edge.sh
 
-# Установка необходимых инструментов для работы с патчем
-RUN apk add --no-cache bash sed
+# Создаем скрипт запуска
+RUN echo '#!/bin/bash\necho "🚀 Запуск патча для Clerk..."\n./fix-clerk-edge.sh || echo "Предупреждение: Патч не применён, но продолжаем работу"\necho "🚀 Запуск приложения..."\nnode server.js' > .next/standalone/start.sh && \
+    chmod +x .next/standalone/start.sh
 
-WORKDIR /app
+# Устанавливаем рабочую директорию
+WORKDIR /app/.next/standalone
 
-# Копируем только необходимые файлы
-COPY --from=builder /app/next.config.js ./
-COPY --from=builder /app/public ./public
-COPY --from=builder /app/.next/standalone ./
-COPY --from=builder /app/.next/static ./.next/static
-COPY fix-clerk-edge.sh ./
-
-# Установка рабочих переменных окружения
-ENV NODE_ENV=production \
-    PORT=3000 \
-    HOSTNAME=0.0.0.0
-
-# Делаем скрипт исполняемым
-RUN chmod +x fix-clerk-edge.sh
-
-# Создаем скрипт для запуска с предварительным патчем
-RUN echo '#!/bin/bash\necho "🚀 Запуск патча для Clerk..."\n./fix-clerk-edge.sh || echo "Предупреждение: Патч не применён, но продолжаем работу"\necho "🚀 Запуск приложения..."\nnode server.js' > start.sh && \
-    chmod +x start.sh
-
-# Экспортируем порт
+# Экспонируем порт
 EXPOSE 3000
 
-# Запускаем приложение через скрипт start.sh
+# Устанавливаем хост и порт
+ENV PORT=3000
+ENV HOSTNAME=0.0.0.0
+
+# Запускаем приложение через скрипт
 CMD ["./start.sh"] 
